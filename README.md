@@ -8,6 +8,7 @@ Each lab provides a pre-configured network topology that students deploy as ligh
 
 | # | Branch | Topic | Status |
 |---|--------|-------|--------|
+| 1 | `lab1-ospf` | OSPF | Released |
 
 Labs are released sequentially during the semester. When a lab becomes available, your instructor will let you know.
 
