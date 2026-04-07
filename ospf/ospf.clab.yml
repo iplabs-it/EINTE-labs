@@ -1,0 +1,84 @@
+name: ospf
+
+topology:
+  defaults:
+    kind: linux
+  nodes:
+    R1:
+      image: frr
+      memory: 70m
+      binds:
+      - daemons:/etc/frr/daemons
+      - R1.conf:/etc/frr/frr.conf
+      exec:
+      - ip route del 0.0.0.0/0
+      - ip route del 172.20.20.0/24 dev eth0
+    R2:
+      image: frr
+      memory: 70m
+      binds:
+      - daemons:/etc/frr/daemons
+      - R2.conf:/etc/frr/frr.conf
+      exec:
+      - ip route del 0.0.0.0/0
+      - ip route del 172.20.20.0/24 dev eth0
+    R3:
+      image: frr
+      memory: 70m
+      binds:
+      - daemons:/etc/frr/daemons
+      - R3.conf:/etc/frr/frr.conf
+      exec:
+      - ip route del 0.0.0.0/0
+      - ip route del 172.20.20.0/24 dev eth0
+    R4:
+      image: frr
+      memory: 70m
+      binds:
+      - daemons:/etc/frr/daemons
+      - R4.conf:/etc/frr/frr.conf
+      exec:
+      - ip route del 0.0.0.0/0
+      - ip route del 172.20.20.0/24 dev eth0
+    R5:
+      image: frr
+      memory: 70m
+      binds:
+      - daemons:/etc/frr/daemons
+      - R5.conf:/etc/frr/frr.conf
+      exec:
+      - ip route del 0.0.0.0/0
+      - ip route del 172.20.20.0/24 dev eth0
+    PC1:
+      image: vpc
+      memory: 30m
+      exec:
+      - ip addr add 192.168.1.2/24 dev eth1
+      - ip route replace 0/0 via 192.168.1.1
+      - ip route del 172.20.20.0/24 dev eth0
+    PC2:
+      image: vpc
+      memory: 30m
+      exec:
+      - ip addr add 192.168.2.2/24 dev eth1
+      - ip route replace 0/0 via 192.168.2.1
+      - ip route del 172.20.20.0/24 dev eth0
+    PC3:
+      image: vpc
+      memory: 30m
+      exec:
+      - ip addr add 192.168.3.2/24 dev eth1
+      - ip route replace 0/0 via 192.168.3.1
+      - ip route del 172.20.20.0/24 dev eth0
+  links:
+    - endpoints: ["R1:eth1", "R2:eth1"]
+    - endpoints: ["R1:eth2", "R3:eth4"]
+    - endpoints: ["R2:eth3", "R3:eth1"]
+    - endpoints: ["R2:eth2", "R4:eth1"]
+    - endpoints: ["R3:eth2", "R4:eth2"]
+    - endpoints: ["R3:eth3", "R5:eth2"]
+    - endpoints: ["R4:eth3", "R5:eth1"]
+    - endpoints: ["R1:eth3", "PC1:eth1"]
+    - endpoints: ["R5:eth3", "PC2:eth1"]
+    - endpoints: ["R4:eth4", "PC3:eth1"]
+
