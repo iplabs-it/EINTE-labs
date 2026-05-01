@@ -1,0 +1,71 @@
+name: bgp
+
+topology:
+  defaults:
+    kind: linux
+  nodes:
+    R1:
+      image: frr
+      memory: 70m
+      binds:
+      - daemons:/etc/frr/daemons
+      - R1.conf:/etc/frr/frr.conf
+      exec:
+      - ip route del 0.0.0.0/0
+      - ip route del 172.20.20.0/24 dev eth0
+    R2:
+      image: frr
+      memory: 70m
+      binds:
+      - daemons:/etc/frr/daemons
+      - R2.conf:/etc/frr/frr.conf
+      exec:
+      - ip route del 0.0.0.0/0
+      - ip route del 172.20.20.0/24 dev eth0
+    R3:
+      image: frr
+      memory: 70m
+      binds:
+      - daemons:/etc/frr/daemons
+      - R3.conf:/etc/frr/frr.conf
+      exec:
+      - ip route del 0.0.0.0/0
+      - ip route del 172.20.20.0/24 dev eth0
+    R4:
+      image: frr
+      memory: 70m
+      binds:
+      - daemons:/etc/frr/daemons
+      - R4.conf:/etc/frr/frr.conf
+      exec:
+      - ip route del 0.0.0.0/0
+      - ip route del 172.20.20.0/24 dev eth0
+    H11:
+      image: vpc
+      memory: 10m
+      exec:
+      - ip addr add 192.168.110.100/26 dev eth1
+      - ip route replace 0/0 via 192.168.110.65
+      - ip route del 172.20.20.0/24 dev eth0
+    H12:
+      image: vpc
+      memory: 10m
+      exec:
+      - ip addr add 192.168.110.200/26 dev eth1
+      - ip route replace 0/0 via 192.168.110.193
+      - ip route del 172.20.20.0/24 dev eth0
+    S41:
+      image: vpc
+      memory: 10m
+      exec:
+      - ip addr add 192.168.140.41/24 dev eth1
+      - ip route replace 0/0 via 192.168.140.1
+      - ip route del 172.20.20.0/24 dev eth0
+  links:
+    - endpoints: ["R1:eth2", "R2:eth1"]
+    - endpoints: ["R1:eth3", "R3:eth1"]
+    - endpoints: ["R2:eth2", "R4:eth2"]
+    - endpoints: ["R3:eth2", "R4:eth3"]
+    - endpoints: ["R1:eth1", "H11:eth1"]
+    - endpoints: ["R1:eth4", "H12:eth1"]
+    - endpoints: ["R4:eth1", "S41:eth1"]
