@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Secure Server - HTTP Lab</title>
+    <style>
+        body { font-family: sans-serif; padding: 40px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: #eee; min-height: 100vh; }
+        h1 { color: #00d9ff; }
+        .info { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid rgba(255,255,255,0.2); }
+        code { background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px; color: #00ff88; }
+        .lock { font-size: 48px; text-align: center; margin: 20px 0; }
+        .security-header { background: #00d9ff; color: #1a1a2e; padding: 10px 15px; border-radius: 4px; margin: 5px 0; display: inline-block; }
+    </style>
+</head>
+<body>
+    <div class="lock">🔒</div>
+    <h1>Secure HTTPS Server</h1>
+    <p>You are connected via TLS (Transport Layer Security)</p>
+    
+    <div class="info">
+        <h2>TLS Features Demonstrated</h2>
+        <ul>
+            <li>Self-signed certificate chain (CA → Server)</li>
+            <li>TLS 1.2 and TLS 1.3 support</li>
+            <li>Modern cipher suites (ECDHE, AES-GCM)</li>
+            <li>Subject Alternative Names (SAN)</li>
+        </ul>
+    </div>
+    
+    <div class="info">
+        <h2>Security Headers</h2>
+        <p>This server sends these security headers:</p>
+        <div class="security-header">Strict-Transport-Security (HSTS)</div>
+        <div class="security-header">X-Content-Type-Options</div>
+        <div class="security-header">X-Frame-Options</div>
+        <div class="security-header">X-XSS-Protection</div>
+    </div>
+    
+    <div class="info">
+        <h2>Commands to Explore</h2>
+        <p>View certificate: <code>openssl s_client -connect https-server:443 -showcerts</code></p>
+        <p>TLS handshake: <code>openssl s_client -connect https-server:443 -state</code></p>
+        <p>Cipher info: <code>openssl s_client -connect https-server:443 -cipher 'ALL'</code></p>
+        <p>Connection info: <code>curl -k https://https-server/connection-info</code></p>
+    </div>
+    
+    <div class="info">
+        <h2>Certificate Details</h2>
+        <p>Issuer: ITLabs Root CA (self-signed for lab purposes)</p>
+        <p>Subject: https-server</p>
+        <p>Valid for: 365 days from generation</p>
+    </div>
+</body>
+</html>

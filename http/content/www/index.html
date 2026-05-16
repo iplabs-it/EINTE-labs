@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTTP Protocol Lab - Warsaw University of Technology</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <header>
+        <h1>HTTP Protocol Laboratory</h1>
+        <p class="subtitle">Institute of Telecommunications - Warsaw University of Technology</p>
+    </header>
+
+    <main>
+        <section id="welcome">
+            <h2>Welcome to the HTTP Lab</h2>
+            <p>This server demonstrates various HTTP concepts including caching, 
+               content negotiation, and different HTTP methods.</p>
+            <img src="/static/images/network-diagram.svg" alt="Network Diagram" class="diagram">
+        </section>
+
+        <section id="resources">
+            <h2>Available Resources</h2>
+            <ul>
+                <li><a href="/static/">Static content</a> - Aggressive caching (immutable)</li>
+                <li><a href="/dynamic/">Dynamic content</a> - No caching</li>
+                <li><a href="/private/">Private content</a> - Browser-only caching</li>
+                <li><a href="/validate/">Validated content</a> - Must revalidate</li>
+                <li><a href="/news/">News section</a> - Short-lived cache with SWR</li>
+                <li><a href="/api/items">REST API</a> - JSON responses</li>
+            </ul>
+        </section>
+
+        <section id="info">
+            <h2>Lab Information</h2>
+            <p>Use <code>curl</code> to explore HTTP headers and caching behavior.</p>
+            <p>Example: <code>curl -I http://webserver/</code></p>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 ITLabs - Educational purposes only</p>
+        <script src="/static/tracker.js"></script>
+    </footer>
+</body>
+</html>

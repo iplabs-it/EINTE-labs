@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>News Section - HTTP Lab</title>
+    <style>
+        body { font-family: sans-serif; padding: 40px; background: #f3e5f5; }
+        h1 { color: #7b1fa2; }
+        .info { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        code { background: #f5f5f5; padding: 4px 8px; border-radius: 4px; }
+        .news-item { border-left: 4px solid #7b1fa2; padding-left: 15px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <h1>News Section</h1>
+    <div class="info">
+        <h2>Cache-Control: public, max-age=60, stale-while-revalidate=30</h2>
+        <p>This demonstrates modern caching with <strong>stale-while-revalidate</strong> (SWR).</p>
+        <ul>
+            <li><strong>max-age=60</strong>: Content is fresh for 60 seconds</li>
+            <li><strong>stale-while-revalidate=30</strong>: After 60s, serve stale content while fetching fresh version in background</li>
+        </ul>
+        <p>Use cases: News feeds, social media timelines, frequently updated content</p>
+    </div>
+    
+    <h2>Latest News</h2>
+    <div class="news-item">
+        <h3>HTTP/3 Adoption Growing</h3>
+        <p>Major websites continue adopting HTTP/3 with QUIC protocol...</p>
+    </div>
+    <div class="news-item">
+        <h3>CDN Market Expands</h3>
+        <p>Content Delivery Networks see record growth in edge computing...</p>
+    </div>
+    <div class="news-item">
+        <h3>Security Headers Importance</h3>
+        <p>HSTS adoption reaches new highs as web security improves...</p>
+    </div>
+    
+    <div class="info">
+        <h2>How to observe SWR:</h2>
+        <p>1. Make initial request: <code>curl -I http://cache-proxy/news/</code></p>
+        <p>2. Check the <code>Age</code> header in subsequent requests</p>
+        <p>3. After 60+ seconds, observe background revalidation behavior</p>
+    </div>
+</body>
+</html>
