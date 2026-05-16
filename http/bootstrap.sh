@@ -104,8 +104,9 @@ deploy_lab() {
         sleep 2
     fi
     
-    # Deploy
-    sudo containerlab deploy --topo "$LAB_DIR/http-lab.clab.yml"
+    # Deploy. containerlab runs rootless on the lab VMs (members of the
+    # `clab_admins` group); no sudo is required.
+    containerlab deploy --topo "$LAB_DIR/http-lab.clab.yml"
     
     echo "  ✓ Lab deployed"
 }
@@ -153,7 +154,7 @@ print_info() {
     echo "  HTTPS:               curl -k https://https-server/"
     echo ""
     echo "To stop the lab:"
-    echo "  sudo containerlab destroy --topo $LAB_DIR/http-lab.clab.yml"
+    echo "  containerlab destroy --topo $LAB_DIR/http-lab.clab.yml"
     echo ""
 }
 
@@ -173,7 +174,7 @@ main() {
         destroy)
             print_step "Destroying lab..."
             cd "$LAB_DIR"
-            sudo containerlab destroy --topo "$LAB_DIR/http-lab.clab.yml" --cleanup
+            containerlab destroy --topo "$LAB_DIR/http-lab.clab.yml" --cleanup
             echo "  ✓ Lab destroyed"
             ;;
         status)
