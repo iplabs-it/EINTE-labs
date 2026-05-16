@@ -31,9 +31,36 @@ The lab consists of four containers:
 | webserver | HTTP origin server | webserver:80 |
 | https-server | HTTPS/TLS server | https-server:443 |
 
+### Fetching the Lab Files
+
+The lab VM image ships with `~/EINTE-labs` already cloned. Pull the
+latest revision and merge the HTTP-lab branch:
+
+```bash
+cd ~/EINTE-labs
+git pull
+git merge --no-edit origin/lab3-http
+```
+
+> **Fallback — VM without the pre-cloned repo.** If `~/EINTE-labs` is
+> empty or `git pull` reports *"not a git repository"*, clone it from
+> scratch and bring in the lab branch:
+>
+> ```bash
+> cd ~
+> rm -rf EINTE-labs                 # only if a non-git EINTE-labs dir is in the way
+> git clone https://github.com/iplabs-it/EINTE-labs.git
+> cd EINTE-labs
+> git merge --no-edit origin/lab3-http
+> ```
+
+This populates `~/EINTE-labs/http/` with the lab files.
+
 ### Starting the Lab
 
 ```bash
+cd ~/EINTE-labs/http
+
 # Deploy the lab
 ./bootstrap.sh deploy
 
