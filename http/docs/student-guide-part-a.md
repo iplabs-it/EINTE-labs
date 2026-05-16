@@ -224,19 +224,30 @@ curl -I -H 'If-None-Match: "YOUR-ETAG-HERE"' http://webserver/validate/
 
 ### A3.3: Last-Modified and If-Modified-Since
 
-Similar to ETag but time-based:
+Similar to ETag but time-based. First read the resource's `Last-Modified`,
+then issue two conditional requests — one with a date *before* it (the
+resource HAS changed since) and one with a date *at or after* it (the
+resource has NOT changed since).
 
 ```bash
-# Get Last-Modified
+# Step 1: read Last-Modified
 curl -I http://webserver/static/styles.css
+# Note the Last-Modified value, e.g. "Sat, 16 May 2026 14:17:20 GMT"
 
-# Conditional request with time
-curl -I -H "If-Modified-Since: Wed, 01 Jan 2025 00:00:00 GMT" http://webserver/static/styles.css
+# Step 2a: ask "has it changed since some date in the past?" → expect 200
+curl -I -H "If-Modified-Since: Wed, 01 Jan 2025 00:00:00 GMT" \
+     http://webserver/static/styles.css
+
+# Step 2b: replay the actual Last-Modified value → expect 304 Not Modified
+curl -I -H "If-Modified-Since: <PASTE-LAST-MODIFIED-HERE>" \
+     http://webserver/static/styles.css
 ```
 
 **Tasks:**
-1. When would you use If-Modified-Since vs If-None-Match?
-2. What are the advantages/disadvantages of each?
+1. What status code do you get for step 2a vs step 2b? Which response carries a body?
+2. When would you use `If-Modified-Since` vs `If-None-Match`?
+3. What are the advantages and disadvantages of each? Consider clock skew,
+   sub-second changes, and resources that change without their mtime changing.
 
 ---
 
