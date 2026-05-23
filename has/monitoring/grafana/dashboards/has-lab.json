@@ -1,0 +1,60 @@
+{
+  "title": "HAS Lab Dashboard",
+  "uid": "has-lab",
+  "refresh": "1s",
+  "time": {"from": "now-5m", "to": "now"},
+  "panels": [
+    {
+      "id": 1,
+      "title": "Bitrate vs Throughput",
+      "type": "timeseries",
+      "gridPos": {"h": 10, "w": 16, "x": 0, "y": 0},
+      "targets": [
+        {"expr": "has_current_bitrate_kbps", "legendFormat": "Selected Bitrate"},
+        {"expr": "has_measured_throughput_kbps", "legendFormat": "Throughput"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "kbps"}}
+    },
+    {
+      "id": 2,
+      "title": "Buffer Level",
+      "type": "gauge",
+      "gridPos": {"h": 5, "w": 4, "x": 16, "y": 0},
+      "targets": [{"expr": "has_buffer_level_segments"}],
+      "fieldConfig": {"defaults": {"max": 5, "thresholds": {"steps": [{"color": "red", "value": 0}, {"color": "yellow", "value": 2}, {"color": "green", "value": 3}]}}}
+    },
+    {
+      "id": 3,
+      "title": "Segment",
+      "type": "stat",
+      "gridPos": {"h": 5, "w": 4, "x": 20, "y": 0},
+      "targets": [{"expr": "has_segment_number"}]
+    },
+    {
+      "id": 4,
+      "title": "Quality Switches",
+      "type": "stat",
+      "gridPos": {"h": 5, "w": 8, "x": 16, "y": 5},
+      "targets": [
+        {"expr": "has_quality_switches_up", "legendFormat": "Up"},
+        {"expr": "has_quality_switches_down", "legendFormat": "Down"}
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Download Time",
+      "type": "timeseries",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 10},
+      "targets": [{"expr": "has_download_time_ms", "legendFormat": "Download Time"}],
+      "fieldConfig": {"defaults": {"unit": "ms"}}
+    },
+    {
+      "id": 6,
+      "title": "Total Segments",
+      "type": "stat",
+      "gridPos": {"h": 6, "w": 6, "x": 12, "y": 10},
+      "targets": [{"expr": "has_segments_downloaded_total"}]
+    }
+  ],
+  "schemaVersion": 38
+}

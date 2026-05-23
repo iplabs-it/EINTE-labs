@@ -1,0 +1,57 @@
+name: has-lab
+
+topology:
+  nodes:
+    server:
+      kind: linux
+      image: has-server:latest
+      binds:
+        - ./content:/var/www/dash:ro
+      exec:
+        - ip addr add 10.0.1.2/24 dev eth1
+        - ip route add 10.0.2.0/24 via 10.0.1.1
+
+    shaper:
+      kind: linux
+      image: ghcr.io/hellt/network-multitool:latest
+      exec:
+        - ip addr add 10.0.1.1/24 dev eth1
+        - ip addr add 10.0.2.1/24 dev eth2
+        - sysctl -w net.ipv4.ip_forward=1
+        - "tc qdisc add dev eth2 root handle 1: htb default 10"
+        - "tc class add dev eth2 parent 1: classid 1:10 htb rate 10mbit ceil 10mbit"
+        - "tc qdisc add dev eth2 parent 1:10 handle 10: netem delay 20ms"
+
+    client:
+      kind: linux
+      image: has-client:latest
+      binds:
+        - ./logs:/app/logs
+      exec:
+        - ip addr add 10.0.2.2/24 dev eth1
+        - ip route add 10.0.1.0/24 via 10.0.2.1
+
+    prometheus:
+      kind: linux
+      image: prom/prometheus:latest
+      binds:
+        - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      ports:
+        - 9090:9090
+
+    grafana:
+      kind: linux
+      image: grafana/grafana:latest
+      binds:
+        - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+        - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      ports:
+        - 3000:3000
+      env:
+        GF_SECURITY_ADMIN_USER: admin
+        GF_SECURITY_ADMIN_PASSWORD: admin
+        GF_AUTH_ANONYMOUS_ENABLED: "true"
+
+  links:
+    - endpoints: ["server:eth1", "shaper:eth1"]
+    - endpoints: ["shaper:eth2", "client:eth1"]
