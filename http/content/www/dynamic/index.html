@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dynamic Content - HTTP Lab</title>
+    <style>
+        body { font-family: sans-serif; padding: 40px; background: #fff3e0; }
+        h1 { color: #e65100; }
+        .info { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        code { background: #f5f5f5; padding: 4px 8px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>Dynamic Content Section</h1>
+    <div class="info">
+        <h2>Cache-Control: no-store, no-cache, must-revalidate</h2>
+        <p>This content should <strong>never be cached</strong>. Every request should go to the origin server.</p>
+        <p>Use cases: Shopping carts, account balances, real-time data</p>
+    </div>
+    <div class="info">
+        <h2>How to verify:</h2>
+        <p>Run: <code>curl -I http://cache-proxy/dynamic/</code></p>
+        <p>Check the <code>X-Cache-Status</code> header - it should show BYPASS or MISS every time.</p>
+    </div>
+    <p>Server time: The server will add this dynamically in a real application.</p>
+</body>
+</html>

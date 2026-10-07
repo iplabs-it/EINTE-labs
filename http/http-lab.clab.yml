@@ -1,0 +1,54 @@
+name: http-lab
+
+topology:
+  nodes:
+    # Client node - students work from here
+    client:
+      kind: linux
+      image: alpine:3.19
+      binds:
+        - scripts/client-init.sh:/tmp/client-init.sh:ro
+        - content/saved:/home/student/saved
+        # Mount the lab CA so client-init.sh can install it into the trust
+        # store; this lets curl validate the https-server cert without -k.
+        - certs:/lab-certs:ro
+      exec:
+        - sh /tmp/client-init.sh
+
+    # Main web server - HTTP content + simple REST API
+    webserver:
+      kind: linux
+      image: nginx:alpine
+      binds:
+        - configs/nginx-webserver.conf:/etc/nginx/nginx.conf:ro
+        - content/www:/usr/share/nginx/html:ro
+      ports:
+        - "8080:80"
+
+    # Caching proxy - OpenResty (nginx + lua) so we can synthesize the
+    # RFC 7234 Age header, which stock nginx does not emit on cache hits.
+    cache-proxy:
+      kind: linux
+      image: openresty/openresty:alpine
+      binds:
+        - configs/nginx-cache.conf:/usr/local/openresty/nginx/conf/nginx.conf:ro
+        - scripts/cache-init.sh:/tmp/cache-init.sh:ro
+      exec:
+        - sh /tmp/cache-init.sh
+
+    # HTTPS server - TLS demonstration
+    https-server:
+      kind: linux
+      image: nginx:alpine
+      binds:
+        - configs/nginx-https.conf:/etc/nginx/nginx.conf:ro
+        - configs/security-headers.conf:/etc/nginx/snippets/security-headers.conf:ro
+        - content/www-secure:/usr/share/nginx/html:ro
+        - certs:/etc/nginx/certs:ro
+      ports:
+        - "8443:443"
+
+  links:
+    - endpoints: ["client:eth1", "cache-proxy:eth1"]
+    - endpoints: ["cache-proxy:eth2", "webserver:eth1"]
+    - endpoints: ["client:eth2", "https-server:eth1"]

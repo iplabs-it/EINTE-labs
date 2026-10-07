@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Private Content - HTTP Lab</title>
+    <style>
+        body { font-family: sans-serif; padding: 40px; background: #fce4ec; }
+        h1 { color: #c2185b; }
+        .info { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        code { background: #f5f5f5; padding: 4px 8px; border-radius: 4px; }
+        .warning { background: #ffcdd2; padding: 15px; border-radius: 8px; border-left: 4px solid #c2185b; }
+    </style>
+</head>
+<body>
+    <h1>Private Content Section</h1>
+    <div class="warning">
+        <strong>Simulated User-Specific Content</strong><br>
+        In a real application, this would contain personalized data.
+    </div>
+    <div class="info">
+        <h2>Cache-Control: private, max-age=600</h2>
+        <p>This content can be cached by the <strong>browser only</strong>, not by shared caches (CDNs, proxies).</p>
+        <p>Use cases: User profiles, personalized content, session data</p>
+    </div>
+    <div class="info">
+        <h2>How to verify:</h2>
+        <p>Run: <code>curl -I http://cache-proxy/private/</code></p>
+        <p>The proxy should show <code>X-Cache-Status: MISS</code> every time because it respects the <code>private</code> directive.</p>
+    </div>
+</body>
+</html>
