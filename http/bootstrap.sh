@@ -111,6 +111,36 @@ deploy_lab() {
     echo "  ✓ Lab deployed"
 }
 
+check_containers() {
+    print_step "Checking containers..."
+
+    local node failed=0
+    for node in client cache-proxy webserver https-server; do
+        if [[ "$(docker inspect -f '{{.State.Running}}' "clab-$LAB_NAME-$node" 2>/dev/null)" != "true" ]]; then
+            print_error "Container '$node' is not running."
+            failed=1
+        fi
+    done
+    if [[ $failed -eq 1 ]]; then
+        print_error "The lab did not start correctly. Run ./bootstrap.sh deploy again."
+        exit 1
+    fi
+
+    # client-init.sh installs curl, bash etc. from the Internet during deploy;
+    # if that failed the client shell is unusable, so retry once and stop
+    # with a clear message rather than reporting success.
+    if ! docker exec "clab-$LAB_NAME-client" sh -c 'command -v bash && command -v curl' &> /dev/null; then
+        print_warn "Client tools are missing (package download failed?). Retrying..."
+        docker exec "clab-$LAB_NAME-client" sh /tmp/client-init.sh &> /dev/null || true
+        if ! docker exec "clab-$LAB_NAME-client" sh -c 'command -v bash && command -v curl' &> /dev/null; then
+            print_error "Could not install the client tools. Check that the VM is online, then run ./bootstrap.sh deploy again."
+            exit 1
+        fi
+    fi
+
+    echo "  ✓ All containers running"
+}
+
 wait_for_services() {
     print_step "Waiting for services to start..."
     
@@ -168,6 +198,7 @@ main() {
             generate_certificates
             pull_images
             deploy_lab
+            check_containers
             wait_for_services
             print_info
             ;;

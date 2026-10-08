@@ -4,20 +4,17 @@
 
 echo "=== Initializing HTTP Lab Client ==="
 
-# Update and install packages
-apk update
-apk add --no-cache \
-    bash \
-    curl \
-    wget \
-    openssl \
-    tcpdump \
-    bind-tools \
-    jq \
-    netcat-openbsd \
-    ca-certificates \
-    vim \
-    less
+# Update and install packages. Retry: right after the container starts,
+# DNS/egress can fail for a few seconds (seen on the VirtualBox lab VMs),
+# and without these tools the client is unusable.
+PACKAGES="bash curl wget openssl tcpdump bind-tools jq netcat-openbsd ca-certificates vim less"
+for attempt in 1 2 3 4 5 6; do
+    if apk update && apk add --no-cache $PACKAGES; then
+        break
+    fi
+    echo "apk failed (attempt $attempt/6), retrying in 5s..."
+    sleep 5
+done
 
 # Create student working directory
 mkdir -p /home/student/saved
