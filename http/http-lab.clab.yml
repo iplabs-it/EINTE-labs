@@ -21,7 +21,10 @@ topology:
       image: nginx:alpine
       binds:
         - configs/nginx-webserver.conf:/etc/nginx/nginx.conf:ro
+        - configs/generated/student.conf:/etc/nginx/student.conf:ro
         - content/www:/usr/share/nginx/html:ro
+        # start page personalised per student (scripts/personalise.sh)
+        - content/generated/index.html:/usr/share/nginx/html/index.html:ro
       ports:
         - "8080:80"
 
@@ -42,6 +45,7 @@ topology:
       image: nginx:alpine
       binds:
         - configs/nginx-https.conf:/etc/nginx/nginx.conf:ro
+        - configs/generated/student.conf:/etc/nginx/student.conf:ro
         - configs/security-headers.conf:/etc/nginx/snippets/security-headers.conf:ro
         - content/www-secure:/usr/share/nginx/html:ro
         - certs:/etc/nginx/certs:ro
