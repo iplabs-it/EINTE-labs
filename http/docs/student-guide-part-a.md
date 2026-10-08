@@ -337,7 +337,7 @@ curl -s -o /dev/null -w "%{http_code} %{size_download} bytes\n" \
 
 ### A4.1: Cache HIT vs MISS
 
-Access content through the caching proxy:
+Access content through the caching proxy and observe repeated requests:
 
 ```bash
 # First request - should be MISS
@@ -350,10 +350,15 @@ curl -I http://cache-proxy/static/styles.css
 curl -I http://cache-proxy/static/styles.css
 ```
 
+> **Tip:** the proxy keeps cached content until the lab is redeployed, and
+> `styles.css` may be cached for a whole year. If your *first* request already
+> shows `HIT`, the file was cached by an earlier run. The query string is part
+> of the cache key, so adding one gives you a fresh entry:
+> `curl -I "http://cache-proxy/static/styles.css?run=2"`
+
 **Tasks:**
 1. Check the `X-Cache-Status` header for each request
-2. What values can X-Cache-Status have? (MISS, HIT, BYPASS, etc.)
-3. Check the `Age` header - what does it represent?
+2. Check the `Age` header - what does it represent? How does it relate to `max-age`?
 
 ### A4.2: Cache Bypass
 
@@ -361,6 +366,7 @@ Test paths that bypass the cache:
 
 ```bash
 # Dynamic content - never cached
+curl -I http://cache-proxy/dynamic/
 curl -I http://cache-proxy/dynamic/
 
 # API - never cached
@@ -370,7 +376,10 @@ curl -I http://cache-proxy/api/time
 
 **Tasks:**
 1. Verify these always show MISS or BYPASS
-2. Why should API responses typically not be cached?
+2. `/dynamic/` shows `MISS`, but the API shows `BYPASS-API`. What is the
+   difference? (Hint: compare the `Cache-Control` header of `/dynamic/` with
+   the fact that the proxy is configured to skip its cache for `/api/`.)
+3. Why should API responses typically not be cached?
 
 ### A4.3: Private Content
 
@@ -380,9 +389,61 @@ curl -I http://cache-proxy/private/
 curl -I http://cache-proxy/private/
 ```
 
+A `MISS` on *every* request means the proxy never stores the response — unlike
+a single `MISS` followed by `HIT`s.
+
 **Tasks:**
 1. Does the proxy cache private content?
 2. Explain why this behavior is important for security
+
+### A4.4: Expiry and Revalidation
+
+Cached content does not stay fresh forever. `/news/` is fresh for 60 s
+(`max-age=60`) and may then be served stale for 30 s more while the proxy
+refreshes it (`stale-while-revalidate=30`). `/validate/` (`no-cache`) may be
+stored, but must be revalidated with the origin before every reuse. The
+`?run=1` query string gives you a fresh cache entry, so the timings below
+work even if you requested `/news/` before; use another number if you repeat
+the steps.
+
+```bash
+# /news/ - fresh for 60 s, then stale-while-revalidate for 30 s
+curl -I "http://cache-proxy/news/?run=1"     # MISS
+curl -I "http://cache-proxy/news/?run=1"     # HIT - note the Age
+sleep 65
+curl -I "http://cache-proxy/news/?run=1"     # STALE - refreshed in the background
+curl -I "http://cache-proxy/news/?run=1"     # HIT - note the Age again
+
+# /validate/ - no-cache: stored, but revalidated on every request
+curl -I http://cache-proxy/validate/
+curl -I http://cache-proxy/validate/
+curl -s -o /dev/null -w "%{http_code} %{size_download} bytes\n" \
+     -H 'If-None-Match: "YOUR-ETAG-HERE"' http://cache-proxy/validate/
+```
+
+Use the same ETag value as in A3.2. The values of `X-Cache-Status` used by
+the proxy are:
+
+| Value | Meaning |
+|-------|---------|
+| `MISS` | Not in the cache (or not storable) – fetched from the origin |
+| `HIT` | Served from the cache while still fresh |
+| `EXPIRED` | Cached copy had expired – full response fetched from the origin |
+| `STALE` | Expired copy served anyway (allowed by `stale-while-revalidate`, or because the origin is down) |
+| `UPDATING` | Expired copy served while another request is refreshing it |
+| `REVALIDATED` | Expired copy confirmed by the origin with `304 Not Modified` |
+| `BYPASS` | Cache deliberately skipped (this lab labels it `BYPASS-API` for `/api/`) |
+
+**Tasks:**
+1. Record `X-Cache-Status` and `Age` for each `/news/` request. Why is the
+   third response `STALE` rather than `MISS`, and what happens to `Age` afterwards?
+2. What would happen if you waited longer than 90 s (max-age + stale-while-revalidate)
+   before the third request? (Optional: try it with `?run=2` and `sleep 95`.)
+3. Why does `/validate/` show `REVALIDATED` rather than `HIT`? What does the
+   proxy send to the origin, and what does it get back?
+4. Compare the conditional request through the proxy with the one you sent
+   directly to the webserver in A3.2.
+5. Which `X-Cache-Status` values did you observe across Exercise A4? Explain each.
 
 ---
 
@@ -391,6 +452,7 @@ curl -I http://cache-proxy/private/
 Submit a report containing:
 1. Answers to all tasks
 2. Screenshots/outputs demonstrating key concepts
-3. A summary table of caching strategies observed
+3. A summary table of the caching strategies observed (consolidating Exercises A3 and A4): for each
+   path, its `Cache-Control` value and the `X-Cache-Status` values seen through the proxy
 
 ---
