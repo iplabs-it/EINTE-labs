@@ -250,6 +250,10 @@ curl -I http://webserver/validate/
 curl -I http://webserver/news/
 ```
 
+> **Note:** `X-Cache-Strategy` is an informal label added by the lab server
+> to help you navigate. It is not a standard header – browsers and caches act
+> only on `Cache-Control`.
+
 **Tasks:**
 1. Create a table showing the Cache-Control value for each path
 2. Explain what each Cache-Control directive means:
@@ -262,21 +266,41 @@ curl -I http://webserver/news/
 
 ### A3.2: ETag and Conditional Requests
 
-ETags enable cache validation without downloading content again.
+ETags enable cache validation without downloading content again. In step 2,
+the `-w` option makes curl print the status code and the number of body bytes
+it received (`-o /dev/null` discards the body itself):
 
 ```bash
 # Step 1: Get the ETag
-curl -I http://webserver/validate/ 
-# Note the ETag value (e.g., "abc123")
+curl -I http://webserver/validate/
+# Note the ETag value, including its double quotes (e.g. "6ac6db0e-668")
 
-# Step 2: Conditional request
-curl -I -H 'If-None-Match: "YOUR-ETAG-HERE"' http://webserver/validate/
+# Step 2: Normal GET vs conditional GET
+curl -s -o /dev/null -w "%{http_code} %{size_download} bytes\n" \
+     http://webserver/validate/
+curl -s -o /dev/null -w "%{http_code} %{size_download} bytes\n" \
+     -H 'If-None-Match: "YOUR-ETAG-HERE"' http://webserver/validate/
+
+# Step 3: Full headers of the conditional response
+curl -i -H 'If-None-Match: "YOUR-ETAG-HERE"' http://webserver/validate/
 ```
+
+Replace only `YOUR-ETAG-HERE`: the header value must contain the ETag inside
+exactly one pair of double quotes, just as the server sent it. Without the
+quotes (or with doubled quotes) the ETag does not match and you get `200`.
+
+> **Tip:** instead of copying the value by hand, you can store it in a shell variable:
+>
+> ```bash
+> ETAG=$(curl -sI http://webserver/validate/ | grep -i '^etag' | cut -d' ' -f2 | tr -d '\r')
+> curl -i -H "If-None-Match: $ETAG" http://webserver/validate/
+> ```
 
 **Tasks:**
 1. What status code do you receive for the conditional request?
-2. Is there a response body? Why or why not?
-3. Calculate bandwidth saved if the resource was 1MB
+2. Compare the number of body bytes of the normal and the conditional GET. Why
+   does the conditional response carry no body?
+3. Calculate the bandwidth saved if the resource was 1 MB.
 
 ### A3.3: Last-Modified and If-Modified-Since
 
@@ -290,17 +314,19 @@ resource has NOT changed since).
 curl -I http://webserver/static/styles.css
 # Note the Last-Modified value, e.g. "Sat, 16 May 2026 14:17:20 GMT"
 
-# Step 2a: ask "has it changed since some date in the past?" → expect 200
-curl -I -H "If-Modified-Since: Wed, 01 Jan 2025 00:00:00 GMT" \
+# Step 2a: IMS in the past (resource has changed since) → expect 200 OK
+curl -s -o /dev/null -w "%{http_code} %{size_download} bytes\n" \
+     -H "If-Modified-Since: Wed, 01 Jan 2025 00:00:00 GMT" \
      http://webserver/static/styles.css
 
 # Step 2b: replay the actual Last-Modified value → expect 304 Not Modified
-curl -I -H "If-Modified-Since: <PASTE-LAST-MODIFIED-HERE>" \
+curl -s -o /dev/null -w "%{http_code} %{size_download} bytes\n" \
+     -H "If-Modified-Since: <PASTE-LAST-MODIFIED-HERE>" \
      http://webserver/static/styles.css
 ```
 
 **Tasks:**
-1. What status code do you get for step 2a vs step 2b? Which response carries a body?
+1. What status code do you get for step 2a vs step 2b? Which response carries a body, and how large is it?
 2. When would you use `If-Modified-Since` vs `If-None-Match`?
 3. What are the advantages and disadvantages of each? Consider clock skew,
    sub-second changes, and resources that change without their mtime changing.
