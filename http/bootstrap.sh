@@ -188,6 +188,13 @@ print_info() {
     echo ""
 }
 
+# Files saved in the client's /home/student/saved are created by root inside
+# the container; hand them to the VM user so they can be opened and edited
+# on the VM (bind mount: content/saved).
+fix_saved_permissions() {
+    docker exec "clab-$LAB_NAME-client" chown -R "$(id -u):$(id -g)" /home/student/saved &> /dev/null || true
+}
+
 # Main execution
 main() {
     print_header
@@ -204,6 +211,7 @@ main() {
             ;;
         destroy)
             print_step "Destroying lab..."
+            fix_saved_permissions
             cd "$LAB_DIR"
             containerlab destroy --topo "$LAB_DIR/http-lab.clab.yml" --cleanup
             echo "  ✓ Lab destroyed"
@@ -216,7 +224,10 @@ main() {
             echo "Connecting to client container..."
             # bash so the manual's `time (for ... done)` syntax in B4.2
             # works (busybox ash rejects it as a syntax error).
-            docker exec -it clab-http-lab-client bash -l
+            # `|| true`: the shell's exit status is that of the student's last
+            # command; don't let set -e skip the permission fix below.
+            docker exec -it clab-http-lab-client bash -l || true
+            fix_saved_permissions
             ;;
         *)
             echo "Usage: $0 {deploy|destroy|status|client}"
