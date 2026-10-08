@@ -38,20 +38,20 @@ The lab consists of four containers:
    folder already exists on your VM. To check, run:
 
    ```bash
-   ls -d ~/EINTE-labs
+   ls -d ~/EINTE-labs/.git
    ```
 
-   **Case A** – the command prints `/home/iplabs/EINTE-labs` (the folder exists).
-   Update it and merge the lab branch:
+   **Case A** – the command prints `/home/iplabs/EINTE-labs/.git` (a copy of the
+   repository is already there). Fetch the latest version and merge the lab branch:
 
    ```bash
    cd ~/EINTE-labs
-   git pull
+   git fetch
    git merge --no-edit origin/lab3-http
    ```
 
-   **Case B** – the command reports *"No such file or directory"* (the folder is
-   missing). Clone the repository and merge the lab branch:
+   **Case B** – the command reports *"No such file or directory"* (there is no
+   repository yet). Clone the repository and merge the lab branch:
 
    ```bash
    cd ~
@@ -67,11 +67,12 @@ The lab consists of four containers:
    ```
 
    The listing should include `bootstrap.sh` and `http-lab.clab.yml`. Running
-   the Case A commands again later is safe – git just reports *"Already up to date"*.
+   the Case A commands again later is safe – if nothing has changed, `git merge`
+   just reports *"Already up to date"*.
 
 > **⚠ Troubleshooting**
 >
-> - If `git pull` reports *"not a git repository"*, `~/EINTE-labs` is not a
+> - If `git fetch` reports *"not a git repository"*, `~/EINTE-labs` is not a
 >   valid copy of the repository. Remove it with `rm -rf ~/EINTE-labs` and
 >   follow Case B.
 > - If `git merge` stops with *"Please tell me who you are"* or *"unable to

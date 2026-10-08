@@ -10,11 +10,11 @@ lab may still be running: after a VM reboot its containers restart
 automatically, but with the **old** configuration. Prepare the lab as follows:
 
 1. Start the lab VM and **make sure your host PC is online**. Open the terminal application.
-2. Update the lab files and merge the latest version of the HTTP-lab branch:
+2. Fetch the latest lab files and merge the latest version of the HTTP-lab branch:
 
    ```bash
    cd ~/EINTE-labs
-   git pull
+   git fetch
    git merge --no-edit origin/lab3-http
    ```
 
