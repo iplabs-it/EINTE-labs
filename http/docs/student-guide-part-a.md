@@ -33,30 +33,59 @@ The lab consists of four containers:
 
 ### Fetching the Lab Files
 
-The lab VM image ships with `~/EINTE-labs` already cloned. Pull the
-latest revision and merge the HTTP-lab branch:
+1. Start the lab VM and **make sure your host PC is online**. Open the terminal application.
+2. Download the lab files. The commands depend on whether the `~/EINTE-labs`
+   folder already exists on your VM. To check, run:
 
-```bash
-cd ~/EINTE-labs
-git pull
-git merge --no-edit origin/lab3-http
-```
+   ```bash
+   ls -d ~/EINTE-labs
+   ```
 
-> **Fallback — VM without the pre-cloned repo.** If `~/EINTE-labs` is
-> empty or `git pull` reports *"not a git repository"*, clone it from
-> scratch and bring in the lab branch:
+   **Case A** – the command prints `/home/iplabs/EINTE-labs` (the folder exists).
+   Update it and merge the lab branch:
+
+   ```bash
+   cd ~/EINTE-labs
+   git pull
+   git merge --no-edit origin/lab3-http
+   ```
+
+   **Case B** – the command reports *"No such file or directory"* (the folder is
+   missing). Clone the repository and merge the lab branch:
+
+   ```bash
+   cd ~
+   git clone https://github.com/iplabs-it/EINTE-labs.git
+   cd EINTE-labs
+   git merge --no-edit origin/lab3-http
+   ```
+
+3. Check the result. Both cases place the lab files in the `~/EINTE-labs/http` folder:
+
+   ```bash
+   ls ~/EINTE-labs/http
+   ```
+
+   The listing should include `bootstrap.sh` and `http-lab.clab.yml`. Running
+   the Case A commands again later is safe – git just reports *"Already up to date"*.
+
+> **⚠ Troubleshooting**
 >
-> ```bash
-> cd ~
-> rm -rf EINTE-labs                 # only if a non-git EINTE-labs dir is in the way
-> git clone https://github.com/iplabs-it/EINTE-labs.git
-> cd EINTE-labs
-> git merge --no-edit origin/lab3-http
-> ```
-
-This populates `~/EINTE-labs/http/` with the lab files.
+> - If `git pull` reports *"not a git repository"*, `~/EINTE-labs` is not a
+>   valid copy of the repository. Remove it with `rm -rf ~/EINTE-labs` and
+>   follow Case B.
+> - If `git merge` stops with *"Please tell me who you are"* or *"unable to
+>   auto-detect email address"*, set a git identity once, then run the
+>   `git merge` command again:
+>
+>   ```bash
+>   git config --global user.name "EINTE Student"
+>   git config --global user.email "student@einte.lab"
+>   ```
 
 ### Starting the Lab
+
+Go to the lab folder, deploy the lab environment and connect to the client container:
 
 ```bash
 cd ~/EINTE-labs/http
@@ -117,29 +146,33 @@ curl -I http://webserver/
 
 ### A1.3: HTTP Methods
 
-The server provides a simple REST API. Test different methods:
+The server provides a simple REST API. Test different methods – the `-i`
+option makes curl print the response status line and headers before the body:
 
 ```bash
 # GET - retrieve items
-curl http://webserver/api/items
+curl -i http://webserver/api/items
 
 # GET - single item
-curl http://webserver/api/items/1
+curl -i http://webserver/api/items/1
 
 # POST - create item
-curl -X POST http://webserver/api/items
+curl -i -X POST http://webserver/api/items
 
 # PUT - update item
-curl -X PUT http://webserver/api/items/1
+curl -i -X PUT http://webserver/api/items/1
 
 # DELETE - remove item
-curl -X DELETE http://webserver/api/items/1
+curl -i -X DELETE http://webserver/api/items/1
 ```
+
+> **Note:** the API is simulated – it returns realistic responses, but changes
+> are not stored (e.g. item 1 is still there after the DELETE).
 
 **Tasks:**
 1. What HTTP status code does POST return? Why?
 2. What is the difference between PUT and POST semantically?
-3. Try an unsupported method (e.g., PATCH) - what happens?
+3. Try an unsupported method (e.g., PATCH) - what happens? Check the `Allow` header in the response.
 
 ---
 
@@ -155,27 +188,50 @@ curl -I http://webserver/
 
 # Request compression
 curl -I -H "Accept-Encoding: gzip" http://webserver/
+
+# Compare the number of body bytes actually transferred
+curl -s http://webserver/ | wc -c
+curl -s -H "Accept-Encoding: gzip" http://webserver/ | wc -c
 ```
 
 **Tasks:**
 1. What header indicates the response is compressed?
 2. Check the Vary header - what does it tell caches?
+3. How many bytes does compression save for this page (absolute and in %)?
+4. Compare the `ETag` and `Content-Length` headers of the two responses. Why
+   does the ETag of the compressed response start with `W/`, and why is
+   `Content-Length` missing?
 
 ### A2.2: User-Agent Behavior
 
-Some servers behave differently based on User-Agent:
+Every request carries a `User-Agent` header identifying the client. The
+`/api/echo` endpoint shows what the server received:
 
 ```bash
 # Default curl User-Agent
-curl -I http://webserver/
+curl http://webserver/api/echo
 
 # Custom User-Agent
-curl -I -H "User-Agent: Mozilla/5.0 (Educational Bot)" http://webserver/
+curl -H "User-Agent: Mozilla/5.0 (Educational Bot)" http://webserver/api/echo
+```
+
+Some servers behave differently based on User-Agent. The `/ua/` page
+classifies the client and adapts its response:
+
+```bash
+curl -i http://webserver/ua/
+curl -i -H "User-Agent: Mozilla/5.0 (Educational Bot)" http://webserver/ua/
+curl -i -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) Firefox/128.0" http://webserver/ua/
 ```
 
 **Tasks:**
 1. Document the default User-Agent string curl sends
-2. Why might servers care about User-Agent?
+2. How does the server classify each client? Which response header reveals it?
+3. The "Educational Bot" string starts with `Mozilla/5.0`, yet it is classified
+   as a bot. Why do crawlers and other tools put `Mozilla/5.0` in their User-Agent?
+4. The `/ua/` responses carry `Vary: User-Agent`. What does this tell a cache,
+   and what would go wrong without it?
+5. Why might servers care about User-Agent? Is it a reliable way to identify clients?
 
 ---
 
@@ -194,6 +250,10 @@ curl -I http://webserver/validate/
 curl -I http://webserver/news/
 ```
 
+> **Note:** `X-Cache-Strategy` is an informal label added by the lab server
+> to help you navigate. It is not a standard header – browsers and caches act
+> only on `Cache-Control`.
+
 **Tasks:**
 1. Create a table showing the Cache-Control value for each path
 2. Explain what each Cache-Control directive means:
@@ -206,21 +266,41 @@ curl -I http://webserver/news/
 
 ### A3.2: ETag and Conditional Requests
 
-ETags enable cache validation without downloading content again.
+ETags enable cache validation without downloading content again. In step 2,
+the `-w` option makes curl print the status code and the number of body bytes
+it received (`-o /dev/null` discards the body itself):
 
 ```bash
 # Step 1: Get the ETag
-curl -I http://webserver/validate/ 
-# Note the ETag value (e.g., "abc123")
+curl -I http://webserver/validate/
+# Note the ETag value, including its double quotes (e.g. "6ac6db0e-668")
 
-# Step 2: Conditional request
-curl -I -H 'If-None-Match: "YOUR-ETAG-HERE"' http://webserver/validate/
+# Step 2: Normal GET vs conditional GET
+curl -s -o /dev/null -w "%{http_code} %{size_download} bytes\n" \
+     http://webserver/validate/
+curl -s -o /dev/null -w "%{http_code} %{size_download} bytes\n" \
+     -H 'If-None-Match: "YOUR-ETAG-HERE"' http://webserver/validate/
+
+# Step 3: Full headers of the conditional response
+curl -i -H 'If-None-Match: "YOUR-ETAG-HERE"' http://webserver/validate/
 ```
+
+Replace only `YOUR-ETAG-HERE`: the header value must contain the ETag inside
+exactly one pair of double quotes, just as the server sent it. Without the
+quotes (or with doubled quotes) the ETag does not match and you get `200`.
+
+> **Tip:** instead of copying the value by hand, you can store it in a shell variable:
+>
+> ```bash
+> ETAG=$(curl -sI http://webserver/validate/ | grep -i '^etag' | cut -d' ' -f2 | tr -d '\r')
+> curl -i -H "If-None-Match: $ETAG" http://webserver/validate/
+> ```
 
 **Tasks:**
 1. What status code do you receive for the conditional request?
-2. Is there a response body? Why or why not?
-3. Calculate bandwidth saved if the resource was 1MB
+2. Compare the number of body bytes of the normal and the conditional GET. Why
+   does the conditional response carry no body?
+3. Calculate the bandwidth saved if the resource was 1 MB.
 
 ### A3.3: Last-Modified and If-Modified-Since
 
@@ -234,17 +314,19 @@ resource has NOT changed since).
 curl -I http://webserver/static/styles.css
 # Note the Last-Modified value, e.g. "Sat, 16 May 2026 14:17:20 GMT"
 
-# Step 2a: ask "has it changed since some date in the past?" → expect 200
-curl -I -H "If-Modified-Since: Wed, 01 Jan 2025 00:00:00 GMT" \
+# Step 2a: IMS in the past (resource has changed since) → expect 200 OK
+curl -s -o /dev/null -w "%{http_code} %{size_download} bytes\n" \
+     -H "If-Modified-Since: Wed, 01 Jan 2025 00:00:00 GMT" \
      http://webserver/static/styles.css
 
 # Step 2b: replay the actual Last-Modified value → expect 304 Not Modified
-curl -I -H "If-Modified-Since: <PASTE-LAST-MODIFIED-HERE>" \
+curl -s -o /dev/null -w "%{http_code} %{size_download} bytes\n" \
+     -H "If-Modified-Since: <PASTE-LAST-MODIFIED-HERE>" \
      http://webserver/static/styles.css
 ```
 
 **Tasks:**
-1. What status code do you get for step 2a vs step 2b? Which response carries a body?
+1. What status code do you get for step 2a vs step 2b? Which response carries a body, and how large is it?
 2. When would you use `If-Modified-Since` vs `If-None-Match`?
 3. What are the advantages and disadvantages of each? Consider clock skew,
    sub-second changes, and resources that change without their mtime changing.
@@ -255,7 +337,7 @@ curl -I -H "If-Modified-Since: <PASTE-LAST-MODIFIED-HERE>" \
 
 ### A4.1: Cache HIT vs MISS
 
-Access content through the caching proxy:
+Access content through the caching proxy and observe repeated requests:
 
 ```bash
 # First request - should be MISS
@@ -268,10 +350,15 @@ curl -I http://cache-proxy/static/styles.css
 curl -I http://cache-proxy/static/styles.css
 ```
 
+> **Tip:** the proxy keeps cached content until the lab is redeployed, and
+> `styles.css` may be cached for a whole year. If your *first* request already
+> shows `HIT`, the file was cached by an earlier run. The query string is part
+> of the cache key, so adding one gives you a fresh entry:
+> `curl -I "http://cache-proxy/static/styles.css?run=2"`
+
 **Tasks:**
 1. Check the `X-Cache-Status` header for each request
-2. What values can X-Cache-Status have? (MISS, HIT, BYPASS, etc.)
-3. Check the `Age` header - what does it represent?
+2. Check the `Age` header - what does it represent? How does it relate to `max-age`?
 
 ### A4.2: Cache Bypass
 
@@ -279,6 +366,7 @@ Test paths that bypass the cache:
 
 ```bash
 # Dynamic content - never cached
+curl -I http://cache-proxy/dynamic/
 curl -I http://cache-proxy/dynamic/
 
 # API - never cached
@@ -288,7 +376,10 @@ curl -I http://cache-proxy/api/time
 
 **Tasks:**
 1. Verify these always show MISS or BYPASS
-2. Why should API responses typically not be cached?
+2. `/dynamic/` shows `MISS`, but the API shows `BYPASS-API`. What is the
+   difference? (Hint: compare the `Cache-Control` header of `/dynamic/` with
+   the fact that the proxy is configured to skip its cache for `/api/`.)
+3. Why should API responses typically not be cached?
 
 ### A4.3: Private Content
 
@@ -298,9 +389,61 @@ curl -I http://cache-proxy/private/
 curl -I http://cache-proxy/private/
 ```
 
+A `MISS` on *every* request means the proxy never stores the response — unlike
+a single `MISS` followed by `HIT`s.
+
 **Tasks:**
 1. Does the proxy cache private content?
 2. Explain why this behavior is important for security
+
+### A4.4: Expiry and Revalidation
+
+Cached content does not stay fresh forever. `/news/` is fresh for 60 s
+(`max-age=60`) and may then be served stale for 30 s more while the proxy
+refreshes it (`stale-while-revalidate=30`). `/validate/` (`no-cache`) may be
+stored, but must be revalidated with the origin before every reuse. The
+`?run=1` query string gives you a fresh cache entry, so the timings below
+work even if you requested `/news/` before; use another number if you repeat
+the steps.
+
+```bash
+# /news/ - fresh for 60 s, then stale-while-revalidate for 30 s
+curl -I "http://cache-proxy/news/?run=1"     # MISS
+curl -I "http://cache-proxy/news/?run=1"     # HIT - note the Age
+sleep 65
+curl -I "http://cache-proxy/news/?run=1"     # STALE - refreshed in the background
+curl -I "http://cache-proxy/news/?run=1"     # HIT - note the Age again
+
+# /validate/ - no-cache: stored, but revalidated on every request
+curl -I http://cache-proxy/validate/
+curl -I http://cache-proxy/validate/
+curl -s -o /dev/null -w "%{http_code} %{size_download} bytes\n" \
+     -H 'If-None-Match: "YOUR-ETAG-HERE"' http://cache-proxy/validate/
+```
+
+Use the same ETag value as in A3.2. The values of `X-Cache-Status` used by
+the proxy are:
+
+| Value | Meaning |
+|-------|---------|
+| `MISS` | Not in the cache (or not storable) – fetched from the origin |
+| `HIT` | Served from the cache while still fresh |
+| `EXPIRED` | Cached copy had expired – full response fetched from the origin |
+| `STALE` | Expired copy served anyway (allowed by `stale-while-revalidate`, or because the origin is down) |
+| `UPDATING` | Expired copy served while another request is refreshing it |
+| `REVALIDATED` | Expired copy confirmed by the origin with `304 Not Modified` |
+| `BYPASS` | Cache deliberately skipped (this lab labels it `BYPASS-API` for `/api/`) |
+
+**Tasks:**
+1. Record `X-Cache-Status` and `Age` for each `/news/` request. Why is the
+   third response `STALE` rather than `MISS`, and what happens to `Age` afterwards?
+2. What would happen if you waited longer than 90 s (max-age + stale-while-revalidate)
+   before the third request? (Optional: try it with `?run=2` and `sleep 95`.)
+3. Why does `/validate/` show `REVALIDATED` rather than `HIT`? What does the
+   proxy send to the origin, and what does it get back?
+4. Compare the conditional request through the proxy with the one you sent
+   directly to the webserver in A3.2.
+5. Which `X-Cache-Status` values did you observe across Exercise A4? Explain each.
 
 ---
 
@@ -309,6 +452,25 @@ curl -I http://cache-proxy/private/
 Submit a report containing:
 1. Answers to all tasks
 2. Screenshots/outputs demonstrating key concepts
-3. A summary table of caching strategies observed
+3. A summary table of the caching strategies observed (consolidating Exercises A3 and A4): for each
+   path, its `Cache-Control` value and the `X-Cache-Status` values seen through the proxy
+
+---
+
+## Stopping the Lab
+
+When you have finished Part A, stop the lab so that it does not keep running
+(and restart with every VM boot) until Part B:
+
+```bash
+# Exit client container
+exit
+
+# Stop the lab
+./bootstrap.sh destroy
+```
+
+Part B starts with *Preparing the Lab*, which updates the files and deploys
+the lab again.
 
 ---
