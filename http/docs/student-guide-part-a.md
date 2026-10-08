@@ -33,30 +33,59 @@ The lab consists of four containers:
 
 ### Fetching the Lab Files
 
-The lab VM image ships with `~/EINTE-labs` already cloned. Pull the
-latest revision and merge the HTTP-lab branch:
+1. Start the lab VM and **make sure your host PC is online**. Open the terminal application.
+2. Download the lab files. The commands depend on whether the `~/EINTE-labs`
+   folder already exists on your VM. To check, run:
 
-```bash
-cd ~/EINTE-labs
-git pull
-git merge --no-edit origin/lab3-http
-```
+   ```bash
+   ls -d ~/EINTE-labs
+   ```
 
-> **Fallback — VM without the pre-cloned repo.** If `~/EINTE-labs` is
-> empty or `git pull` reports *"not a git repository"*, clone it from
-> scratch and bring in the lab branch:
+   **Case A** – the command prints `/home/iplabs/EINTE-labs` (the folder exists).
+   Update it and merge the lab branch:
+
+   ```bash
+   cd ~/EINTE-labs
+   git pull
+   git merge --no-edit origin/lab3-http
+   ```
+
+   **Case B** – the command reports *"No such file or directory"* (the folder is
+   missing). Clone the repository and merge the lab branch:
+
+   ```bash
+   cd ~
+   git clone https://github.com/iplabs-it/EINTE-labs.git
+   cd EINTE-labs
+   git merge --no-edit origin/lab3-http
+   ```
+
+3. Check the result. Both cases place the lab files in the `~/EINTE-labs/http` folder:
+
+   ```bash
+   ls ~/EINTE-labs/http
+   ```
+
+   The listing should include `bootstrap.sh` and `http-lab.clab.yml`. Running
+   the Case A commands again later is safe – git just reports *"Already up to date"*.
+
+> **⚠ Troubleshooting**
 >
-> ```bash
-> cd ~
-> rm -rf EINTE-labs                 # only if a non-git EINTE-labs dir is in the way
-> git clone https://github.com/iplabs-it/EINTE-labs.git
-> cd EINTE-labs
-> git merge --no-edit origin/lab3-http
-> ```
-
-This populates `~/EINTE-labs/http/` with the lab files.
+> - If `git pull` reports *"not a git repository"*, `~/EINTE-labs` is not a
+>   valid copy of the repository. Remove it with `rm -rf ~/EINTE-labs` and
+>   follow Case B.
+> - If `git merge` stops with *"Please tell me who you are"* or *"unable to
+>   auto-detect email address"*, set a git identity once, then run the
+>   `git merge` command again:
+>
+>   ```bash
+>   git config --global user.name "EINTE Student"
+>   git config --global user.email "student@einte.lab"
+>   ```
 
 ### Starting the Lab
+
+Go to the lab folder, deploy the lab environment and connect to the client container:
 
 ```bash
 cd ~/EINTE-labs/http
@@ -117,29 +146,33 @@ curl -I http://webserver/
 
 ### A1.3: HTTP Methods
 
-The server provides a simple REST API. Test different methods:
+The server provides a simple REST API. Test different methods – the `-i`
+option makes curl print the response status line and headers before the body:
 
 ```bash
 # GET - retrieve items
-curl http://webserver/api/items
+curl -i http://webserver/api/items
 
 # GET - single item
-curl http://webserver/api/items/1
+curl -i http://webserver/api/items/1
 
 # POST - create item
-curl -X POST http://webserver/api/items
+curl -i -X POST http://webserver/api/items
 
 # PUT - update item
-curl -X PUT http://webserver/api/items/1
+curl -i -X PUT http://webserver/api/items/1
 
 # DELETE - remove item
-curl -X DELETE http://webserver/api/items/1
+curl -i -X DELETE http://webserver/api/items/1
 ```
+
+> **Note:** the API is simulated – it returns realistic responses, but changes
+> are not stored (e.g. item 1 is still there after the DELETE).
 
 **Tasks:**
 1. What HTTP status code does POST return? Why?
 2. What is the difference between PUT and POST semantically?
-3. Try an unsupported method (e.g., PATCH) - what happens?
+3. Try an unsupported method (e.g., PATCH) - what happens? Check the `Allow` header in the response.
 
 ---
 
