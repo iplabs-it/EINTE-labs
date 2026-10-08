@@ -608,11 +608,13 @@ openssl s_client -connect https-server:443 -tls1_3 </dev/null 2>&1 | \
 ### B2.1: Traffic Comparison
 
 Capture the traffic of one HTTP request. `timeout 5` stops the capture after
-5 seconds, and `wait` waits until it has finished:
+5 seconds, and `wait` waits until it has finished. `-n` keeps tcpdump from
+replacing addresses with host names, so a server name can only appear inside
+the packets themselves:
 
 ```bash
 # Capture HTTP traffic in the background
-timeout 5 tcpdump -i any -A -s 0 'port 80' > /tmp/http-capture.txt &
+timeout 5 tcpdump -n -i any -A -s 0 'port 80' > /tmp/http-capture.txt &
 sleep 1
 
 # Make an HTTP request
@@ -626,7 +628,7 @@ cat /tmp/http-capture.txt
 Now capture HTTPS traffic the same way:
 
 ```bash
-timeout 5 tcpdump -i any -A -s 0 'port 443' > /tmp/https-capture.txt &
+timeout 5 tcpdump -n -i any -A -s 0 'port 443' > /tmp/https-capture.txt &
 sleep 1
 curl -s https://https-server/ > /dev/null
 wait
