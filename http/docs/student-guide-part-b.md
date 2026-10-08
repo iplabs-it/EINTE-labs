@@ -1,13 +1,22 @@
-# PART B: Advanced Topics (Approx. 2 hours)
+# HTTP Protocol Laboratory
+## Part B — Advanced Topics
+
+*TLS · OpenSSL · Performance · Security*
+
+**Warsaw University of Technology**  
+**Institute of Telecommunications**
 
 ---
 
-## Preparing the Lab
+## 1 INTRODUCTION
 
-Part B is a separate lab session, usually some weeks after Part A, on the
-same VM. In the meantime the lab files may have been updated, and the Part A
-lab may still be running: after a VM reboot its containers restart
-automatically, but with the **old** configuration. Prepare the lab as follows:
+This manual is Part B of the HTTP Protocol Laboratory and builds on the foundation laid in Part A. Where Part A focused on the HTTP wire format and caching basics, Part B explores HTTPS/TLS, encrypted traffic analysis, advanced caching scenarios, performance measurement, and practical scripting tasks. The same containerised lab environment is used — section 1.1 explains how to prepare it for this session; see the Part A manual for the helper-command details.
+
+Each exercise builds on the previous one; work through them in order.
+
+### 1.1 Preparing the Lab
+
+Part B is a separate lab session, usually some weeks after Part A, on the same VM. In the meantime the lab files may have been updated, and the Part A lab may still be running: after a VM reboot its containers restart automatically, but with the **old** configuration. Prepare the lab as follows:
 
 1. Start the lab VM and **make sure your host PC is online**. Open the terminal application.
 2. Fetch the latest lab files and merge the latest version of the HTTP-lab branch:
@@ -18,15 +27,9 @@ automatically, but with the **old** configuration. Prepare the lab as follows:
    git merge --no-edit origin/lab3-http
    ```
 
-   - If git reports *"Your local changes to the following files would be
-     overwritten by merge"*, you edited lab files during Part A. Discard those
-     edits with `git restore .` and run the `git merge` command again. (Your
-     files in `content/saved/` are not affected.)
-   - If `~/EINTE-labs` does not exist, follow *Fetching the Lab Files* in the
-     Part A manual (Case B).
-
-3. **Always redeploy the lab**, even if it seems to be running – this replaces
-   any old containers with fresh ones that use the updated files:
+   - If git reports *"Your local changes to the following files would be overwritten by merge"*, you edited lab files during Part A. Discard those edits with `git restore .` and run the `git merge` command again. (Your files in `content/saved/` are not affected.)
+   - If `~/EINTE-labs` does not exist, follow *Fetching the Lab Files* in the Part A manual (Case B).
+3. **Always redeploy the lab**, even if it seems to be running – this replaces any old containers with fresh ones that use the updated files:
 
    ```bash
    cd ~/EINTE-labs/http
@@ -34,17 +37,15 @@ automatically, but with the **old** configuration. Prepare the lab as follows:
    ./bootstrap.sh client
    ```
 
-   The cache of the proxy starts empty after a redeploy; this is expected.
-   Files you saved in `/home/student/saved` during Part A are kept.
+The cache of the proxy starts empty after a redeploy; this is expected. Files you saved in `/home/student/saved` during Part A are kept.
 
-The helper commands from Part A (`webserver`, `proxy`, `secure`, `cache_test`,
-`tls_info`, `tls_handshake`) are available in the client again.
+The helper commands from Part A (`webserver`, `proxy`, `secure`, `cache_test`, `tls_info`, `tls_handshake`) are available in the client again.
 
----
+## 2 ADVANCED TOPICS — PART B EXERCISES
 
-## Exercise B1: HTTPS and TLS
+### 2.1 Exercise B1 — HTTPS and TLS
 
-### B1.1: TLS Handshake Observation
+#### B1.1 TLS Handshake Observation
 
 Connect to the HTTPS server and observe the TLS handshake:
 
@@ -53,17 +54,16 @@ Connect to the HTTPS server and observe the TLS handshake:
 openssl s_client -connect https-server:443 -state </dev/null
 ```
 
-`</dev/null` closes the connection right after the handshake. Without it,
-`s_client` stays connected and waits for you to type an HTTP request – press
-`Ctrl+C` to leave.
+`</dev/null` closes the connection right after the handshake. Without it, `s_client` stays connected and waits for you to type an HTTP request – press `Ctrl+C` to leave.
 
 **Tasks:**
+
 1. Identify the TLS version negotiated
 2. List the handshake states observed
 3. What cipher suite was selected?
 4. How many certificates are in the chain?
 
-### B1.2: Certificate Inspection
+#### B1.2 Certificate Inspection
 
 Examine the server certificate in detail:
 
@@ -74,13 +74,14 @@ openssl s_client -connect https-server:443 </dev/null 2>/dev/null | \
 ```
 
 **Tasks:**
+
 1. Who is the certificate issuer (CA)?
 2. Who is the subject?
 3. What are the Subject Alternative Names (SANs)?
 4. When does the certificate expire?
 5. What signature algorithm and public key type are used?
 
-### B1.3: Certificate Chain
+#### B1.3 Certificate Chain
 
 ```bash
 # Show full certificate chain
@@ -88,14 +89,13 @@ openssl s_client -connect https-server:443 -showcerts </dev/null
 ```
 
 **Tasks:**
+
 1. How many certificates are shown?
 2. Draw the trust chain (CA → Server)
 3. Why is a certificate chain necessary?
-4. This lab server also sends the root CA certificate. Real servers usually
-   send only their own certificate and the intermediate CA(s). Why is sending
-   the root unnecessary?
+4. This lab server also sends the root CA certificate. Real servers usually send only their own certificate and the intermediate CA(s). Why is sending the root unnecessary?
 
-### B1.4: Cipher Suite Analysis
+#### B1.4 Cipher Suite Analysis
 
 ```bash
 # Which TLS 1.2 ciphers does the server accept? (tests each cipher in turn)
@@ -118,22 +118,16 @@ openssl s_client -connect https-server:443 -tls1_3 </dev/null 2>&1 | \
 ```
 
 **Tasks:**
+
 1. What cipher is used with TLS 1.2? What cipher is used with TLS 1.3?
-2. The server is configured with four TLS 1.2 ciphers – two `ECDHE-ECDSA-…`
-   and two `ECDHE-RSA-…`. Which ones are accepted, and why? (Hint: the public
-   key type you found in B1.2.)
+2. The server is configured with four TLS 1.2 ciphers – two `ECDHE-ECDSA-…` and two `ECDHE-RSA-…`. Which ones are accepted, and why? (Hint: the public key type you found in B1.2.)
 3. Why are different ciphers used for different TLS versions?
 
----
+### 2.2 Exercise B2 — HTTPS vs HTTP in Practice
 
-## Exercise B2: HTTPS vs HTTP in Practice
+#### B2.1 Traffic Comparison
 
-### B2.1: Traffic Comparison
-
-Capture the traffic of one HTTP request. `timeout 5` stops the capture after
-5 seconds, and `wait` waits until it has finished. `-n` keeps tcpdump from
-replacing addresses with host names, so a server name can only appear inside
-the packets themselves:
+Capture the traffic of one HTTP request. `timeout 5` stops the capture after 5 seconds, and `wait` waits until it has finished. `-n` keeps tcpdump from replacing addresses with host names, so a server name can only appear inside the packets themselves:
 
 ```bash
 # Capture HTTP traffic in the background
@@ -159,24 +153,23 @@ cat /tmp/https-capture.txt
 ```
 
 **Tasks:**
+
 1. Can you read the HTTP request/response in the first capture?
 2. Can you read anything meaningful in the HTTPS capture?
-3. What specific information is visible even in encrypted traffic? (Hint:
-   search the HTTPS capture for the server's name – where in the TLS
-   handshake does it come from?)
+3. What specific information is visible even in encrypted traffic? (Hint: search the HTTPS capture for the server's name – where in the TLS handshake does it come from?)
 
-### B2.2: Security Headers
+#### B2.2 Security Headers
 
 ```bash
 curl -I https://https-server/
 ```
 
-The lab's CA certificate is installed in the client's trust store, so curl can
-verify the server certificate. On servers with self-signed certificates you
-will often see `curl -k` instead.
+The lab's CA certificate is installed in the client's trust store, so curl can verify the server certificate. On servers with self-signed certificates you will often see `curl -k` instead.
 
 **Tasks:**
+
 1. Find and explain each security header:
+
    - Strict-Transport-Security (HSTS)
    - X-Content-Type-Options
    - X-Frame-Options
@@ -184,11 +177,10 @@ will often see `curl -k` instead.
    - Content-Security-Policy
    - Referrer-Policy
 2. What attack does each header help prevent?
-3. `X-XSS-Protection` is deprecated and ignored by modern browsers. What
-   replaces it?
+3. `X-XSS-Protection` is deprecated and ignored by modern browsers. What replaces it?
 4. What does curl's `-k` option do, and why is it not needed here?
 
-### B2.3: HTTP to HTTPS Redirect
+#### B2.3 HTTP to HTTPS Redirect
 
 ```bash
 # Try HTTP on HTTPS server (port 80)
@@ -199,21 +191,16 @@ curl -I -L http://https-server/
 ```
 
 **Tasks:**
+
 1. What status code triggers the redirect?
 2. What is the Location header value?
 3. Why is automatic HTTP→HTTPS redirect important?
 
----
+### 2.3 Exercise B3 — Advanced Caching Scenarios
 
-## Exercise B3: Advanced Caching Scenarios
+#### B3.1 Stale-While-Revalidate – Inside and Outside the Window
 
-### B3.1: Stale-While-Revalidate – Inside and Outside the Window
-
-In A4.4 you saw a stale copy being served shortly after `max-age` expired.
-Here you compare two cached copies of `/news/` (`max-age=60`,
-`stale-while-revalidate=30`): copy **a** is requested again *inside* the
-stale window, copy **b** only *after* it. The query string makes them two
-separate cache entries. The whole sequence takes about 95 s:
+In A4.4 you saw a stale copy being served shortly after `max-age` expired. Here you compare two cached copies of `/news/` (`max-age=60`, `stale-while-revalidate=30`): copy **a** is requested again *inside* the stale window, copy **b** only *after* it. The query string makes them two separate cache entries. The whole sequence takes about 95 s:
 
 ```bash
 curl -sI "http://cache-proxy/news/?copy=a" | grep -iE '^age|x-cache-status'
@@ -231,14 +218,13 @@ curl -sI "http://cache-proxy/news/?copy=a" | grep -iE '^age|x-cache-status'
 If you repeat the steps, use new names (e.g. `?copy=c`, `?copy=d`).
 
 **Tasks:**
+
 1. Record `X-Cache-Status` and `Age` for each request.
 2. Why is copy **a** served `STALE` after 65 s, but copy **b** `REVALIDATED` after 95 s?
-3. For which of the two requests did the client have to wait for the origin
-   server? Explain the benefit of stale-while-revalidate for user experience.
-4. At the end, copy **a** is a `HIT` with `Age` ≈ 30, although it was first
-   fetched 95 s earlier. Why?
+3. For which of the two requests did the client have to wait for the origin server? Explain the benefit of stale-while-revalidate for user experience.
+4. At the end, copy **a** is a `HIT` with `Age` ≈ 30, although it was first fetched 95 s earlier. Why?
 
-### B3.2: Vary Header Impact
+#### B3.2 Vary Header Impact
 
 Request the same resource through the proxy with and without compression:
 
@@ -250,18 +236,15 @@ curl -sI -H "Accept-Encoding: gzip" http://cache-proxy/static/styles.css | grep 
 ```
 
 **Tasks:**
+
 1. What is the Vary header set to?
-2. Why is the first gzip request a `MISS`, even though the plain copy is
-   already cached? How many copies of `styles.css` does the proxy now hold?
+2. Why is the first gzip request a `MISS`, even though the plain copy is already cached? How many copies of `styles.css` does the proxy now hold?
 3. How does Vary affect caching behavior?
-4. Why might too many Vary values hurt cache efficiency? (Think of
-   `Vary: User-Agent` on the `/ua/` page from A2.2.)
+4. Why might too many Vary values hurt cache efficiency? (Think of `Vary: User-Agent` on the `/ua/` page from A2.2.)
 
-### B3.3: Cache Invalidation Strategies
+#### B3.3 Cache Invalidation Strategies
 
-In a production environment, you often need to invalidate cached content
-before it expires. The lab proxy supports **purging**: a `PURGE` request
-removes a URL from the cache.
+In a production environment, you often need to invalidate cached content before it expires. The lab proxy supports **purging**: a `PURGE` request removes a URL from the cache.
 
 ```bash
 # Check current cache state (should be HIT after B3.2)
@@ -278,20 +261,15 @@ curl -sI "http://cache-proxy/static/styles.css?v=2" | grep -iE 'x-cache-status'
 ```
 
 **Tasks:**
-1. What does the proxy report after the purge, and how many files were
-   removed? Relate the number to B3.2.
-2. Compare three invalidation strategies you have now seen in the lab:
-   expiry (`max-age`, A4.4), purging, and versioned URLs (`?v=2`). What are
-   the advantages and disadvantages of each? Why are versioned URLs a natural
-   fit for resources sent with `immutable`?
+
+1. What does the proxy report after the purge, and how many files were removed? Relate the number to B3.2.
+2. Compare three invalidation strategies you have now seen in the lab: expiry (`max-age`, A4.4), purging, and versioned URLs (`?v=2`). What are the advantages and disadvantages of each? Why are versioned URLs a natural fit for resources sent with `immutable`?
 3. What is the "cache invalidation" problem in computer science?
 4. How do CDNs handle cache invalidation?
 
----
+### 2.4 Exercise B4 — HTTP Performance Analysis
 
-## Exercise B4: HTTP Performance Analysis
-
-### B4.1: Connection Timing
+#### B4.1 Connection Timing
 
 ```bash
 # Detailed timing information
@@ -312,19 +290,17 @@ curl -w "\nTime breakdown:\n\
   -o /dev/null -s https://https-server/
 ```
 
-The values are cumulative: each one is measured from the start of the request.
-Run each command a few times – single measurements vary.
+The values are cumulative: each one is measured from the start of the request. Run each command a few times – single measurements vary.
 
-> **Note:** if all phases show exactly the same value (e.g. `0.024000s`
-> everywhere), the VM's clock is too coarse for this measurement – ask your
-> instructor.
+***Note:*** *if all phases show exactly the same value (e.g.* `0.024000s` *everywhere), the VM's clock is too coarse for this measurement – ask your instructor.*
 
 **Tasks:**
+
 1. Compare HTTP vs HTTPS timing
 2. What additional overhead does TLS add?
 3. Which phase takes the longest?
 
-### B4.2: Keep-Alive Connections
+#### B4.2 Keep-Alive Connections
 
 ```bash
 # Multiple requests, new connection each time
@@ -340,19 +316,16 @@ curl -sv http://webserver/ http://webserver/ -o /dev/null -o /dev/null 2>&1 | \
 ```
 
 **Tasks:**
+
 1. Compare the total time for both approaches
 2. Why is connection reuse important?
 3. What HTTP header controls keep-alive behavior?
 
----
+### 2.5 Exercise B5 — Practical Scenarios
 
-## Exercise B5: Practical Scenarios
+#### B5.1 Building a Simple Website Download
 
-### B5.1: Building a Simple Website Download
-
-Download all resources for offline viewing. The client's `/home/student/saved`
-folder is shared with the VM: on the VM it is
-`~/EINTE-labs/http/content/saved`.
+Download all resources for offline viewing. The client's `/home/student/saved` folder is shared with the VM: on the VM it is `~/EINTE-labs/http/content/saved`.
 
 ```bash
 cd /home/student/saved
@@ -371,22 +344,17 @@ curl http://webserver/static/images/network-diagram.svg \
   -o network-diagram.svg
 ```
 
-To view the page, open
-`file:///home/iplabs/EINTE-labs/http/content/saved/index.html` in the VM's web
-browser. You can edit `index.html` inside the client with `vi`, or on the VM
-after you leave the client shell with `exit` – `./bootstrap.sh client` then
-hands the saved files over to your VM user.
+To view the page, open `file:///home/iplabs/EINTE-labs/http/content/saved/index.html` in the VM's web browser. You can edit `index.html` inside the client with `vi`, or on the VM after you leave the client shell with `exit` – `./bootstrap.sh client` then hands the saved files over to your VM user.
 
 **Tasks:**
+
 1. Edit index.html to fix the resource paths for local viewing
 2. Verify the page renders correctly
 3. What tool automates this process? (hint: wget with options)
 
-### B5.2: API Interaction Script
+#### B5.2 API Interaction Script
 
-Create a script that interacts with the REST API. Save it as
-`/home/student/saved/api-test.sh`, so that it is kept on the VM
-(`~/EINTE-labs/http/content/saved/api-test.sh`) after the lab is stopped:
+Create a script that interacts with the REST API. Save it as `/home/student/saved/api-test.sh`, so that it is kept on the VM (`~/EINTE-labs/http/content/saved/api-test.sh`) after the lab is stopped:
 
 ```bash
 #!/bin/sh
@@ -410,42 +378,38 @@ curl -s -X DELETE http://webserver/api/items/3 | jq .
 Run it with `sh /home/student/saved/api-test.sh`.
 
 **Tasks:**
+
 1. Run the script and document the output
 2. What would you add for error handling?
 3. How would you add authentication to API requests?
 
----
-
-## Part B Deliverables
+## 3 PART B DELIVERABLES
 
 Submit a report containing:
-1. Answers to all tasks with supporting evidence
-2. TLS certificate analysis with chain diagram
-3. Performance comparison between HTTP and HTTPS
-4. Analysis of at least 3 caching scenarios
-5. Working API interaction script
 
----
+1. Answers to all tasks with supporting evidence.
+2. TLS certificate analysis with a chain diagram.
+3. Performance comparison between HTTP and HTTPS.
+4. Analysis of at least three caching scenarios.
+5. Working API interaction script.
 
-## Final Checklist
+## 4 FINAL CHECKLIST
 
-Before submitting, ensure you have:
+Before submitting your *combined* Part A + Part B report, verify you have completed everything below. The list spans both manuals.
 
 - [ ] Documented all HTTP methods tested
-- [ ] Created caching strategy comparison table
-- [ ] Captured and analyzed ETag/conditional requests
-- [ ] Examined TLS handshake and certificates
+- [ ] Created a caching strategy comparison table
+- [ ] Captured and analysed ETag / conditional requests
+- [ ] Examined the TLS handshake and certificates
 - [ ] Compared HTTP vs HTTPS traffic visibility
-- [ ] Tested stale-while-revalidate behavior
+- [ ] Tested `stale-while-revalidate` behaviour
 - [ ] Purged a cached resource and compared invalidation strategies
 - [ ] Measured HTTP vs HTTPS performance
-- [ ] Downloaded and fixed website for offline viewing
+- [ ] Downloaded and fixed a website for offline viewing
 
----
+## 5 STOPPING THE LAB
 
-## Stopping the Lab
-
-When finished:
+When you are finished with the lab, clean up:
 
 ```bash
 # Exit client container
@@ -455,20 +419,13 @@ exit
 ./bootstrap.sh destroy
 ```
 
-Files in `~/EINTE-labs/http/content/saved` (your downloaded website and
-`api-test.sh`) stay on the VM after the lab is stopped.
+Files in `~/EINTE-labs/http/content/saved` (your downloaded website and `api-test.sh`) stay on the VM after the lab is stopped.
 
----
+## 6 REFERENCES
 
-## References
-
-- RFC 7234 - HTTP Caching
-- RFC 7232 - HTTP Conditional Requests  
-- RFC 8446 - TLS 1.3
-- RFC 6797 - HTTP Strict Transport Security (HSTS)
+- RFC 7234 — HTTP Caching
+- RFC 7232 — HTTP Conditional Requests
+- RFC 8446 — TLS 1.3
+- RFC 6797 — HTTP Strict Transport Security (HSTS)
 - MDN Web Docs: HTTP Caching
 - curl documentation: https://curl.se/docs/
-
----
-
-*HTTP Protocol Laboratory - Warsaw University of Technology*
