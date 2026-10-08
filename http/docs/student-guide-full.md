@@ -456,7 +456,65 @@ Submit a report containing:
    path, its `Cache-Control` value and the `X-Cache-Status` values seen through the proxy
 
 ---
+
+## Stopping the Lab
+
+When you have finished Part A, stop the lab so that it does not keep running
+(and restart with every VM boot) until Part B:
+
+```bash
+# Exit client container
+exit
+
+# Stop the lab
+./bootstrap.sh destroy
+```
+
+Part B starts with *Preparing the Lab*, which updates the files and deploys
+the lab again.
+
+---
 # PART B: Advanced Topics (Approx. 2 hours)
+
+---
+
+## Preparing the Lab
+
+Part B is a separate lab session, usually some weeks after Part A, on the
+same VM. In the meantime the lab files may have been updated, and the Part A
+lab may still be running: after a VM reboot its containers restart
+automatically, but with the **old** configuration. Prepare the lab as follows:
+
+1. Start the lab VM and **make sure your host PC is online**. Open the terminal application.
+2. Update the lab files and merge the latest version of the HTTP-lab branch:
+
+   ```bash
+   cd ~/EINTE-labs
+   git pull
+   git merge --no-edit origin/lab3-http
+   ```
+
+   - If git reports *"Your local changes to the following files would be
+     overwritten by merge"*, you edited lab files during Part A. Discard those
+     edits with `git restore .` and run the `git merge` command again. (Your
+     files in `content/saved/` are not affected.)
+   - If `~/EINTE-labs` does not exist, follow *Fetching the Lab Files* in the
+     Part A manual (Case B).
+
+3. **Always redeploy the lab**, even if it seems to be running – this replaces
+   any old containers with fresh ones that use the updated files:
+
+   ```bash
+   cd ~/EINTE-labs/http
+   ./bootstrap.sh deploy
+   ./bootstrap.sh client
+   ```
+
+   The cache of the proxy starts empty after a redeploy; this is expected.
+   Files you saved in `/home/student/saved` during Part A are kept.
+
+The helper commands from Part A (`webserver`, `proxy`, `secure`, `cache_test`,
+`tls_info`, `tls_handshake`) are available in the client again.
 
 ---
 
@@ -468,8 +526,12 @@ Connect to the HTTPS server and observe the TLS handshake:
 
 ```bash
 # Verbose TLS connection
-openssl s_client -connect https-server:443 -state
+openssl s_client -connect https-server:443 -state </dev/null
 ```
+
+`</dev/null` closes the connection right after the handshake. Without it,
+`s_client` stays connected and waits for you to type an HTTP request – press
+`Ctrl+C` to leave.
 
 **Tasks:**
 1. Identify the TLS version negotiated
@@ -492,7 +554,7 @@ openssl s_client -connect https-server:443 </dev/null 2>/dev/null | \
 2. Who is the subject?
 3. What are the Subject Alternative Names (SANs)?
 4. When does the certificate expire?
-5. What signature algorithm is used?
+5. What signature algorithm and public key type are used?
 
 ### B1.3: Certificate Chain
 
@@ -505,21 +567,37 @@ openssl s_client -connect https-server:443 -showcerts </dev/null
 1. How many certificates are shown?
 2. Draw the trust chain (CA → Server)
 3. Why is a certificate chain necessary?
+4. This lab server also sends the root CA certificate. Real servers usually
+   send only their own certificate and the intermediate CA(s). Why is sending
+   the root unnecessary?
 
 ### B1.4: Cipher Suite Analysis
 
 ```bash
-# Check supported ciphers
-openssl s_client -connect https-server:443 -cipher 'ALL' </dev/null 2>&1 | grep "Cipher"
+# Which TLS 1.2 ciphers does the server accept? (tests each cipher in turn)
+for c in $(openssl ciphers 'ALL:!aNULL:!eNULL' | tr ':' ' '); do
+  openssl s_client -connect https-server:443 -tls1_2 -cipher "$c" \
+    </dev/null >/dev/null 2>&1 && echo "accepted: $c"
+done
 
-# Try specific TLS version
-openssl s_client -connect https-server:443 -tls1_2 </dev/null 2>&1 | grep -E "(Protocol|Cipher)"
-openssl s_client -connect https-server:443 -tls1_3 </dev/null 2>&1 | grep -E "(Protocol|Cipher)"
+# Which TLS 1.3 cipher suites does the server accept?
+for c in TLS_AES_128_GCM_SHA256 TLS_AES_256_GCM_SHA384 TLS_CHACHA20_POLY1305_SHA256; do
+  openssl s_client -connect https-server:443 -tls1_3 -ciphersuites "$c" \
+    </dev/null >/dev/null 2>&1 && echo "accepted: $c"
+done
+
+# Which cipher is negotiated for each TLS version?
+openssl s_client -connect https-server:443 -tls1_2 </dev/null 2>&1 | \
+  grep -E "(Protocol|Cipher)"
+openssl s_client -connect https-server:443 -tls1_3 </dev/null 2>&1 | \
+  grep -E "(Protocol|Cipher)"
 ```
 
 **Tasks:**
-1. What cipher is used with TLS 1.2?
-2. What cipher is used with TLS 1.3?
+1. What cipher is used with TLS 1.2? What cipher is used with TLS 1.3?
+2. The server is configured with four TLS 1.2 ciphers – two `ECDHE-ECDSA-…`
+   and two `ECDHE-RSA-…`. Which ones are accepted, and why? (Hint: the public
+   key type you found in B1.2.)
 3. Why are different ciphers used for different TLS versions?
 
 ---
@@ -528,42 +606,48 @@ openssl s_client -connect https-server:443 -tls1_3 </dev/null 2>&1 | grep -E "(P
 
 ### B2.1: Traffic Comparison
 
-First, capture some HTTP traffic:
+Capture the traffic of one HTTP request. `timeout 5` stops the capture after
+5 seconds, and `wait` waits until it has finished:
 
 ```bash
-# In one terminal, start capture
-tcpdump -i any -A -s 0 'port 80' -c 20 > /tmp/http-capture.txt &
+# Capture HTTP traffic in the background
+timeout 5 tcpdump -i any -A -s 0 'port 80' > /tmp/http-capture.txt &
+sleep 1
 
-# Make HTTP request
-curl http://webserver/
+# Make an HTTP request
+curl -s http://webserver/ > /dev/null
 
-# Wait for capture to finish, then view
+# Wait for the capture to finish, then view it
+wait
 cat /tmp/http-capture.txt
 ```
 
-Now capture HTTPS traffic:
+Now capture HTTPS traffic the same way:
 
 ```bash
-# Start capture for HTTPS
-tcpdump -i any -s 0 'port 443' -c 20 > /tmp/https-capture.txt &
-
-# Make HTTPS request
-curl -k https://https-server/
-
-# View capture
+timeout 5 tcpdump -i any -A -s 0 'port 443' > /tmp/https-capture.txt &
+sleep 1
+curl -s https://https-server/ > /dev/null
+wait
 cat /tmp/https-capture.txt
 ```
 
 **Tasks:**
 1. Can you read the HTTP request/response in the first capture?
 2. Can you read anything meaningful in the HTTPS capture?
-3. What specific information is visible even in encrypted traffic?
+3. What specific information is visible even in encrypted traffic? (Hint:
+   search the HTTPS capture for the server's name – where in the TLS
+   handshake does it come from?)
 
 ### B2.2: Security Headers
 
 ```bash
-curl -I -k https://https-server/
+curl -I https://https-server/
 ```
+
+The lab's CA certificate is installed in the client's trust store, so curl can
+verify the server certificate. On servers with self-signed certificates you
+will often see `curl -k` instead.
 
 **Tasks:**
 1. Find and explain each security header:
@@ -571,7 +655,12 @@ curl -I -k https://https-server/
    - X-Content-Type-Options
    - X-Frame-Options
    - X-XSS-Protection
+   - Content-Security-Policy
+   - Referrer-Policy
 2. What attack does each header help prevent?
+3. `X-XSS-Protection` is deprecated and ignored by modern browsers. What
+   replaces it?
+4. What does curl's `-k` option do, and why is it not needed here?
 
 ### B2.3: HTTP to HTTPS Redirect
 
@@ -592,60 +681,85 @@ curl -I -L http://https-server/
 
 ## Exercise B3: Advanced Caching Scenarios
 
-### B3.1: Stale-While-Revalidate
+### B3.1: Stale-While-Revalidate – Inside and Outside the Window
 
-The `/news/` path uses stale-while-revalidate. Test it:
+In A4.4 you saw a stale copy being served shortly after `max-age` expired.
+Here you compare two cached copies of `/news/` (`max-age=60`,
+`stale-while-revalidate=30`): copy **a** is requested again *inside* the
+stale window, copy **b** only *after* it. The query string makes them two
+separate cache entries. The whole sequence takes about 95 s:
 
 ```bash
-# Initial request
-curl -I http://cache-proxy/news/
-echo "Age after first request:"
-curl -sI http://cache-proxy/news/ | grep -i age
-
-# Wait and check age
+curl -sI "http://cache-proxy/news/?copy=a" | grep -iE '^age|x-cache-status'
+curl -sI "http://cache-proxy/news/?copy=b" | grep -iE '^age|x-cache-status'
+sleep 65
+echo "--- copy a after 65 s:"
+curl -sI "http://cache-proxy/news/?copy=a" | grep -iE '^age|x-cache-status'
 sleep 30
-echo "Age after 30 seconds:"
-curl -sI http://cache-proxy/news/ | grep -i age
-
-sleep 35
-echo "Age after 65 seconds (past max-age):"
-curl -sI http://cache-proxy/news/ | grep -i age
+echo "--- copy b after 95 s:"
+curl -sI "http://cache-proxy/news/?copy=b" | grep -iE '^age|x-cache-status'
+echo "--- copy a again:"
+curl -sI "http://cache-proxy/news/?copy=a" | grep -iE '^age|x-cache-status'
 ```
 
-**Tasks:**
-1. How does Age header change over time?
-2. What happens when Age exceeds max-age?
-3. Explain the benefit of stale-while-revalidate for user experience
-
-### B3.2: Cache Invalidation Strategies
-
-In a production environment, you often need to invalidate cached content.
-
-```bash
-# Check current cache state
-curl -I http://cache-proxy/static/styles.css
-
-# Request cache purge (simulated)
-curl http://cache-proxy/purge
-```
+If you repeat the steps, use new names (e.g. `?copy=c`, `?copy=d`).
 
 **Tasks:**
-1. Research and describe 3 cache invalidation strategies
-2. What is the "cache invalidation" problem in computer science?
-3. How do CDNs handle cache invalidation?
+1. Record `X-Cache-Status` and `Age` for each request.
+2. Why is copy **a** served `STALE` after 65 s, but copy **b** `REVALIDATED` after 95 s?
+3. For which of the two requests did the client have to wait for the origin
+   server? Explain the benefit of stale-while-revalidate for user experience.
+4. At the end, copy **a** is a `HIT` with `Age` ≈ 30, although it was first
+   fetched 95 s earlier. Why?
 
-### B3.3: Vary Header Impact
+### B3.2: Vary Header Impact
+
+Request the same resource through the proxy with and without compression:
 
 ```bash
-# Request with different Accept-Encoding
-curl -I http://webserver/
-curl -I -H "Accept-Encoding: gzip" http://webserver/
+curl -sI http://cache-proxy/static/styles.css | grep -iE '^vary|content-encoding|x-cache-status'
+curl -sI -H "Accept-Encoding: gzip" http://cache-proxy/static/styles.css | grep -iE '^vary|content-encoding|x-cache-status'
+curl -sI http://cache-proxy/static/styles.css | grep -iE 'x-cache-status'
+curl -sI -H "Accept-Encoding: gzip" http://cache-proxy/static/styles.css | grep -iE 'x-cache-status'
 ```
 
 **Tasks:**
 1. What is the Vary header set to?
-2. How does Vary affect caching behavior?
-3. Why might too many Vary values hurt cache efficiency?
+2. Why is the first gzip request a `MISS`, even though the plain copy is
+   already cached? How many copies of `styles.css` does the proxy now hold?
+3. How does Vary affect caching behavior?
+4. Why might too many Vary values hurt cache efficiency? (Think of
+   `Vary: User-Agent` on the `/ua/` page from A2.2.)
+
+### B3.3: Cache Invalidation Strategies
+
+In a production environment, you often need to invalidate cached content
+before it expires. The lab proxy supports **purging**: a `PURGE` request
+removes a URL from the cache.
+
+```bash
+# Check current cache state (should be HIT after B3.2)
+curl -sI http://cache-proxy/static/styles.css | grep -iE 'x-cache-status|^age'
+
+# Purge the cached copies of styles.css
+curl -X PURGE http://cache-proxy/static/styles.css
+
+# The next request has to go to the origin again
+curl -sI http://cache-proxy/static/styles.css | grep -iE 'x-cache-status|^age'
+
+# Alternative strategy: a versioned URL is a new cache key
+curl -sI "http://cache-proxy/static/styles.css?v=2" | grep -iE 'x-cache-status'
+```
+
+**Tasks:**
+1. What does the proxy report after the purge, and how many files were
+   removed? Relate the number to B3.2.
+2. Compare three invalidation strategies you have now seen in the lab:
+   expiry (`max-age`, A4.4), purging, and versioned URLs (`?v=2`). What are
+   the advantages and disadvantages of each? Why are versioned URLs a natural
+   fit for resources sent with `immutable`?
+3. What is the "cache invalidation" problem in computer science?
+4. How do CDNs handle cache invalidation?
 
 ---
 
@@ -669,8 +783,15 @@ curl -w "\nTime breakdown:\n\
   TLS handshake: %{time_appconnect}s\n\
   Time to first byte: %{time_starttransfer}s\n\
   Total time: %{time_total}s\n" \
-  -o /dev/null -s -k https://https-server/
+  -o /dev/null -s https://https-server/
 ```
+
+The values are cumulative: each one is measured from the start of the request.
+Run each command a few times – single measurements vary.
+
+> **Note:** if all phases show exactly the same value (e.g. `0.024000s`
+> everywhere), the VM's clock is too coarse for this measurement – ask your
+> instructor.
 
 **Tasks:**
 1. Compare HTTP vs HTTPS timing
@@ -684,7 +805,12 @@ curl -w "\nTime breakdown:\n\
 time (for i in 1 2 3 4 5; do curl -s http://webserver/ > /dev/null; done)
 
 # Multiple requests, reusing connection
-time curl -s http://webserver/ http://webserver/ http://webserver/ http://webserver/ http://webserver/ > /dev/null
+time curl -s http://webserver/ http://webserver/ http://webserver/ \
+          http://webserver/ http://webserver/ > /dev/null
+
+# Show that curl reuses the connection
+curl -sv http://webserver/ http://webserver/ -o /dev/null -o /dev/null 2>&1 | \
+  grep -iE "connected to|re-using"
 ```
 
 **Tasks:**
@@ -698,7 +824,9 @@ time curl -s http://webserver/ http://webserver/ http://webserver/ http://webser
 
 ### B5.1: Building a Simple Website Download
 
-Download all resources for offline viewing:
+Download all resources for offline viewing. The client's `/home/student/saved`
+folder is shared with the VM: on the VM it is
+`~/EINTE-labs/http/content/saved`.
 
 ```bash
 cd /home/student/saved
@@ -713,8 +841,15 @@ curl http://webserver/static/styles.css -o styles.css
 curl http://webserver/static/tracker.js -o tracker.js
 
 # Download image
-curl http://webserver/static/images/network-diagram.svg -o network-diagram.svg
+curl http://webserver/static/images/network-diagram.svg \
+  -o network-diagram.svg
 ```
+
+To view the page, open
+`file:///home/iplabs/EINTE-labs/http/content/saved/index.html` in the VM's web
+browser. You can edit `index.html` inside the client with `vi`, or on the VM
+after you leave the client shell with `exit` – `./bootstrap.sh client` then
+hands the saved files over to your VM user.
 
 **Tasks:**
 1. Edit index.html to fix the resource paths for local viewing
@@ -723,11 +858,12 @@ curl http://webserver/static/images/network-diagram.svg -o network-diagram.svg
 
 ### B5.2: API Interaction Script
 
-Create a script that interacts with the REST API:
+Create a script that interacts with the REST API. Save it as
+`/home/student/saved/api-test.sh`, so that it is kept on the VM
+(`~/EINTE-labs/http/content/saved/api-test.sh`) after the lab is stopped:
 
 ```bash
 #!/bin/sh
-# Save as /home/student/api-test.sh
 
 printf '=== Getting all items ===\n'
 curl -s http://webserver/api/items | jq .
@@ -744,6 +880,8 @@ curl -s -X PUT http://webserver/api/items/2 | jq .
 printf '\n=== Deleting item 3 ===\n'
 curl -s -X DELETE http://webserver/api/items/3 | jq .
 ```
+
+Run it with `sh /home/student/saved/api-test.sh`.
 
 **Tasks:**
 1. Run the script and document the output
@@ -773,6 +911,7 @@ Before submitting, ensure you have:
 - [ ] Examined TLS handshake and certificates
 - [ ] Compared HTTP vs HTTPS traffic visibility
 - [ ] Tested stale-while-revalidate behavior
+- [ ] Purged a cached resource and compared invalidation strategies
 - [ ] Measured HTTP vs HTTPS performance
 - [ ] Downloaded and fixed website for offline viewing
 
@@ -789,6 +928,9 @@ exit
 # Stop the lab
 ./bootstrap.sh destroy
 ```
+
+Files in `~/EINTE-labs/http/content/saved` (your downloaded website and
+`api-test.sh`) stay on the VM after the lab is stopped.
 
 ---
 

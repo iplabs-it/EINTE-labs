@@ -456,3 +456,21 @@ Submit a report containing:
    path, its `Cache-Control` value and the `X-Cache-Status` values seen through the proxy
 
 ---
+
+## Stopping the Lab
+
+When you have finished Part A, stop the lab so that it does not keep running
+(and restart with every VM boot) until Part B:
+
+```bash
+# Exit client container
+exit
+
+# Stop the lab
+./bootstrap.sh destroy
+```
+
+Part B starts with *Preparing the Lab*, which updates the files and deploys
+the lab again.
+
+---
