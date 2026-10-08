@@ -32,7 +32,7 @@ The labs are designed to run on a **Debian 12** virtual machine with Internet ac
 2. **Switch to the lab branch** when your instructor announces it:
 
    ```bash
-   git pull
+   git fetch
    git merge --no-edit origin/<labN-topic>
    ```
 
@@ -63,11 +63,11 @@ The labs are designed to run on a **Debian 12** virtual machine with Internet ac
 
 ## Getting the Next Lab
 
-When the next lab is released, just pull and merge:
+When the next lab is released, just fetch and merge:
 
 ```bash
 cd ~/EINTE-labs
-git pull
+git fetch
 git merge --no-edit origin/<labN-topic>
 ```
 
