@@ -37,6 +37,8 @@ Part B is a separate lab session, usually some weeks after Part A, on the same V
    ./bootstrap.sh client
    ```
 
+`bootstrap.sh` remembers the student index number you entered in Part A (file `http/.student-id`). If it asks for it again (for example on a freshly downloaded VM), enter the **same** number – your personalised values and `X-Lab-Token` must not change between the two labs. As in Part A, your client session is recorded to `content/saved/sessions/`.
+
 The cache of the proxy starts empty after a redeploy; this is expected. Files you saved in `/home/student/saved` during Part A are kept.
 
 The helper commands from Part A (`webserver`, `proxy`, `secure`, `cache_test`, `tls_info`, `tls_handshake`) are available in the client again.
@@ -392,6 +394,7 @@ Submit a report containing:
 3. Performance comparison between HTTP and HTTPS.
 4. Analysis of at least three caching scenarios.
 5. Working API interaction script.
+6. Your student index number on the first page, and the archive created by `./bootstrap.sh package` (run it on the VM after leaving the client; it contains your saved files and the session recordings).
 
 ## 4 FINAL CHECKLIST
 
@@ -414,6 +417,9 @@ When you are finished with the lab, clean up:
 ```bash
 # Exit client container
 exit
+
+# Package your results for submission
+./bootstrap.sh package
 
 # Stop the lab
 ./bootstrap.sh destroy

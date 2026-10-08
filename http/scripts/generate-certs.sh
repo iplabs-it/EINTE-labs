@@ -3,6 +3,10 @@
 # Run this BEFORE deploying the lab with containerlab
 
 CERT_DIR="$(dirname "$0")/../certs"
+# Per-student parameters (set by bootstrap.sh from scripts/student-seed.sh);
+# defaults keep the script usable on its own.
+CERT_DAYS="${CERT_DAYS:-365}"
+CERT_SAN="${CERT_SAN:-secure-lab.lab.local}"
 mkdir -p "$CERT_DIR"
 cd "$CERT_DIR"
 
@@ -38,7 +42,8 @@ subjectAltName = @alt_names
 [alt_names]
 DNS.1 = https-server
 DNS.2 = secure.lab.local
-DNS.3 = localhost
+DNS.3 = $CERT_SAN
+DNS.4 = localhost
 IP.1 = 127.0.0.1
 EOF
 
@@ -46,7 +51,7 @@ EOF
 echo "[5/5] Signing server certificate..."
 openssl x509 -req -in server.csr \
     -CA ca.crt -CAkey ca.key -CAcreateserial \
-    -out server.crt -days 365 -sha256 \
+    -out server.crt -days "$CERT_DAYS" -sha256 \
     -extfile server.ext
 
 # Build the chain bundle (leaf + CA) that nginx serves. Without this, the
