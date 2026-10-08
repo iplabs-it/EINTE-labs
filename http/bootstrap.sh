@@ -144,7 +144,7 @@ print_info() {
     echo "  • https-server - HTTPS/TLS server"
     echo ""
     echo "Quick access:"
-    echo "  Connect to client:   docker exec -it clab-http-lab-client sh"
+    echo "  Connect to client:   ./bootstrap.sh client"
     echo "  View web server:     curl http://localhost:8080/"
     echo "  View HTTPS server:   curl -k https://localhost:8443/"
     echo ""

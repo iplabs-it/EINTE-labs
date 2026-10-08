@@ -33,6 +33,13 @@ fi
 
 # Create helpful aliases and functions
 cat > /etc/profile.d/lab-helpers.sh << 'EOF'
+# containerlab injects no_proxy/NO_PROXY into every node; with no proxy in
+# use they only add a confusing "Uses proxy env variable" line to curl -v.
+unset no_proxy NO_PROXY
+
+# Start in the student working directory announced in the banner below.
+cd /home/student
+
 # Lab helper aliases
 alias ll='ls -la'
 alias headers='curl -sI'
