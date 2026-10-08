@@ -188,27 +188,50 @@ curl -I http://webserver/
 
 # Request compression
 curl -I -H "Accept-Encoding: gzip" http://webserver/
+
+# Compare the number of body bytes actually transferred
+curl -s http://webserver/ | wc -c
+curl -s -H "Accept-Encoding: gzip" http://webserver/ | wc -c
 ```
 
 **Tasks:**
 1. What header indicates the response is compressed?
 2. Check the Vary header - what does it tell caches?
+3. How many bytes does compression save for this page (absolute and in %)?
+4. Compare the `ETag` and `Content-Length` headers of the two responses. Why
+   does the ETag of the compressed response start with `W/`, and why is
+   `Content-Length` missing?
 
 ### A2.2: User-Agent Behavior
 
-Some servers behave differently based on User-Agent:
+Every request carries a `User-Agent` header identifying the client. The
+`/api/echo` endpoint shows what the server received:
 
 ```bash
 # Default curl User-Agent
-curl -I http://webserver/
+curl http://webserver/api/echo
 
 # Custom User-Agent
-curl -I -H "User-Agent: Mozilla/5.0 (Educational Bot)" http://webserver/
+curl -H "User-Agent: Mozilla/5.0 (Educational Bot)" http://webserver/api/echo
+```
+
+Some servers behave differently based on User-Agent. The `/ua/` page
+classifies the client and adapts its response:
+
+```bash
+curl -i http://webserver/ua/
+curl -i -H "User-Agent: Mozilla/5.0 (Educational Bot)" http://webserver/ua/
+curl -i -H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) Firefox/128.0" http://webserver/ua/
 ```
 
 **Tasks:**
 1. Document the default User-Agent string curl sends
-2. Why might servers care about User-Agent?
+2. How does the server classify each client? Which response header reveals it?
+3. The "Educational Bot" string starts with `Mozilla/5.0`, yet it is classified
+   as a bot. Why do crawlers and other tools put `Mozilla/5.0` in their User-Agent?
+4. The `/ua/` responses carry `Vary: User-Agent`. What does this tell a cache,
+   and what would go wrong without it?
+5. Why might servers care about User-Agent? Is it a reliable way to identify clients?
 
 ---
 
