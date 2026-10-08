@@ -60,10 +60,10 @@ http-lab/
 │   ├── cache-init.sh         # Proxy setup
 │   └── generate-certs.sh     # TLS certificates
 ├── certs/                    # Generated certificates
-└── docs/
+└── docs/                     # Markdown copies of the Word manuals (generated)
     ├── student-guide-part-a.md
     ├── student-guide-part-b.md
-    └── instructor-key.md
+    └── student-guide-full.md
 ```
 
 ## Duration
