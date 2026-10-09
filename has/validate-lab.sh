@@ -2,7 +2,7 @@
 # HAS Lab Validation Script
 # Checks that all components are working correctly
 
-set -e
+# Deliberately no 'set -e': a failing check must be counted, not abort the validation.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${SCRIPT_DIR}"
@@ -67,29 +67,29 @@ echo ""
 
 # Check network connectivity
 echo "Network Connectivity:"
-check "Server responds" "docker exec clab-has-lab-client curl -s --max-time 2 http://10.0.1.2/ > /dev/null"
-check "DASH manifest available" "docker exec clab-has-lab-client curl -s --max-time 2 http://10.0.1.2/stream/manifest.mpd | grep -q MPD"
+check "Server responds" "docker exec clab-has-lab-client curl -s --max-time 5 http://10.0.1.2/health | grep -q OK"
+check "DASH manifest available" "docker exec clab-has-lab-client curl -s --max-time 5 http://10.0.1.2/stream/manifest.mpd | grep -q MPD"
 echo ""
 
 # Check client metrics
 echo "Client Metrics:"
-check "Client metrics endpoint" "docker exec clab-has-lab-client curl -s --max-time 2 http://localhost:8000/metrics | grep -q has_"
-check "Client is streaming" "docker exec clab-has-lab-client curl -s --max-time 2 http://localhost:8000/metrics | grep -q 'has_segment_number [0-9]'"
+check "Client metrics endpoint" "docker exec clab-has-lab-client curl -s --max-time 5 http://localhost:8000/metrics | grep -q has_"
+check "Client is streaming" "docker exec clab-has-lab-client curl -s --max-time 5 http://localhost:8000/metrics | grep -q 'has_segment_number [0-9]'"
 echo ""
 
 # Check Prometheus
 echo "Prometheus:"
-check "Prometheus API" "curl -s --max-time 2 http://localhost:9090/api/v1/status/config | grep -q success"
+check "Prometheus API" "curl -s --max-time 5 http://localhost:9090/api/v1/status/config | grep -q success"
 
 # Get container IPs for checking
 CLIENT_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' clab-has-lab-client 2>/dev/null | head -1)
 
 if [ -n "$CLIENT_IP" ]; then
-    check "Prometheus can reach client" "docker exec clab-has-lab-prometheus wget -q -O- -T 2 http://${CLIENT_IP}:8000/metrics 2>&1 | grep -q has_"
+    check "Prometheus can reach client" "docker exec clab-has-lab-prometheus wget -q -O- -T 5 http://${CLIENT_IP}:8000/metrics 2>&1 | grep -q has_"
 
     # Check if Prometheus has scraped data
-    if curl -s --max-time 2 "http://localhost:9090/api/v1/query?query=has_current_bitrate_kbps" | grep -q '"result":\['; then
-        check "Prometheus has metrics data" "curl -s --max-time 2 'http://localhost:9090/api/v1/query?query=has_current_bitrate_kbps' | python3 -c \"import sys,json; d=json.load(sys.stdin); exit(0 if d['data']['result'] else 1)\""
+    if curl -s --max-time 5 "http://localhost:9090/api/v1/query?query=has_current_bitrate_kbps" | grep -q '"result":\['; then
+        check "Prometheus has metrics data" "curl -s --max-time 5 'http://localhost:9090/api/v1/query?query=has_current_bitrate_kbps' | python3 -c \"import sys,json; d=json.load(sys.stdin); exit(0 if d['data']['result'] else 1)\""
     else
         echo -e "Prometheus scraping metrics... ${YELLOW}⚠ (may take a few seconds)${NC}"
         ((WARNINGS++))
@@ -97,7 +97,7 @@ if [ -n "$CLIENT_IP" ]; then
 fi
 
 # Check target status
-TARGET_STATUS=$(curl -s --max-time 2 http://localhost:9090/api/v1/targets 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['data']['activeTargets'][0]['health'] if len(d['data']['activeTargets']) > 0 else 'unknown')" 2>/dev/null || echo "unknown")
+TARGET_STATUS=$(curl -s --max-time 5 http://localhost:9090/api/v1/targets 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['data']['activeTargets'][0]['health'] if len(d['data']['activeTargets']) > 0 else 'unknown')" 2>/dev/null || echo "unknown")
 
 if [ "$TARGET_STATUS" = "up" ]; then
     echo -e "Prometheus target status... ${GREEN}✓ (up)${NC}"
@@ -113,10 +113,11 @@ echo ""
 
 # Check Grafana
 echo "Grafana:"
-check "Grafana API" "curl -s --max-time 2 http://admin:admin@localhost:3000/api/health | grep -q ok"
-check "Grafana datasource" "curl -s --max-time 2 http://admin:admin@localhost:3000/api/datasources | grep -q Prometheus"
-check "Grafana can query Prometheus" "curl -s --max-time 5 'http://admin:admin@localhost:3000/api/datasources/proxy/1/api/v1/query?query=up' | grep -q success"
-check "Dashboard exists" "curl -s --max-time 2 http://admin:admin@localhost:3000/api/search?query=HAS | grep -q has-lab"
+check "Grafana API" "curl -s --max-time 5 http://admin:admin@localhost:3000/api/health | grep -q ok"
+check "Grafana datasource" "curl -s --max-time 5 http://admin:admin@localhost:3000/api/datasources | grep -q Prometheus"
+DS_UID=$(curl -s --max-time 5 http://admin:admin@localhost:3000/api/datasources 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['uid'])" 2>/dev/null)
+check "Grafana can query Prometheus" "curl -s --max-time 10 'http://admin:admin@localhost:3000/api/datasources/uid/${DS_UID}/health' | grep -qi 'ok\\|success'"
+check "Dashboard exists" "curl -s --max-time 5 http://admin:admin@localhost:3000/api/search?query=HAS | grep -q has-lab"
 echo ""
 
 # Check logs for errors

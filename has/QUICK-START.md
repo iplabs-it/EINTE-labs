@@ -40,7 +40,7 @@ Watch the Grafana dashboard as the ABR algorithm adapts to changing network cond
 
 - **Content generation takes time** - The first-time content preparation (video encoding) may take **over 10 minutes** depending on your system.
 
-- **Lab exercises** - See [LAB_EXERCISES.md](LAB_EXERCISES.md) for the complete student exercise guide.
+- **Lab exercises** - The tasks are in the lab manual (`VMLAB_HAS_clab_EINTE`), handed out by the instructor; `PRELAB_READING.md` in this folder is the background reading.
 
 ## Useful URLs
 

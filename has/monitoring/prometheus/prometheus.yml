@@ -4,4 +4,6 @@ global:
 scrape_configs:
   - job_name: 'has-client'
     static_configs:
-      - targets: ['172.20.20.7:8000']
+      # Container name, resolved by Docker's embedded DNS on the clab
+      # management network — no IP rewriting needed after deploy.
+      - targets: ['clab-has-lab-client:8000']

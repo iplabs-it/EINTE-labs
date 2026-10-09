@@ -146,38 +146,22 @@ deploy_lab() {
     echo -e "${GREEN}✓ Lab deployed${NC}"
 }
 
-# Configure monitoring network
+# Wait for the monitoring stack
 configure_monitoring() {
-    echo "Configuring monitoring network..."
+    echo "Waiting for the monitoring stack..."
 
-    # Wait for containers to be fully ready
-    sleep 3
-
-    # Get actual container IPs from the management network
-    CLIENT_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' clab-has-lab-client 2>/dev/null | head -1)
-    PROMETHEUS_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' clab-has-lab-prometheus 2>/dev/null | head -1)
-
-    if [ -z "$CLIENT_IP" ] || [ -z "$PROMETHEUS_IP" ]; then
-        echo -e "${RED}ERROR: Could not get container IPs${NC}"
-        return 1
-    fi
-
-    echo "  Client IP: $CLIENT_IP"
-    echo "  Prometheus IP: $PROMETHEUS_IP"
-
-    # Update Prometheus config with actual client IP
-    sed -i.bak "s/targets: \['[^']*'\]/targets: ['${CLIENT_IP}:8000']/" monitoring/prometheus/prometheus.yml
-
-    # Update Grafana datasource with actual Prometheus IP
-    sed -i.bak "s|url: http://[0-9.]*:9090|url: http://${PROMETHEUS_IP}:9090|" monitoring/grafana/provisioning/datasources/prometheus.yml
-
-    # Restart containers to pick up new config
-    echo "Restarting monitoring containers..."
-    docker restart clab-has-lab-prometheus clab-has-lab-grafana
-
-    sleep 5
-
-    echo -e "${GREEN}✓ Monitoring configured${NC}"
+    # Prometheus and Grafana address the other containers by name
+    # (clab-has-lab-client, clab-has-lab-prometheus); Docker's DNS on the
+    # clab management network resolves them, so nothing needs rewriting.
+    local i
+    for i in $(seq 1 30); do
+        if curl -s --max-time 2 http://localhost:3000/api/health 2>/dev/null | grep -q '"database": *"ok"'; then
+            echo -e "${GREEN}✓ Grafana is up${NC}"
+            return 0
+        fi
+        sleep 2
+    done
+    echo -e "${YELLOW}Grafana did not answer within 60 s; validation may report it${NC}"
 }
 
 # Main execution

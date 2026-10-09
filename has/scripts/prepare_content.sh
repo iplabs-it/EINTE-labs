@@ -23,12 +23,16 @@ if [[ ! -f "${LAB_DIR}/content/bbb_source.mp4" ]]; then
 fi
 
 echo "Encoding DASH content at multiple bitrates..."
+# -g 60 / -keyint_min 60 / -sc_threshold 0: a keyframe every 60 frames (2 s at
+# 30 fps) and nowhere else, so -seg_duration 2 really yields 2-second segments.
+# Without it libx264 uses a 250-frame GOP and the segments come out 8.3 s long.
 docker run --rm -v "${LAB_DIR}/content:/content" -v "${CONTENT_DIR}:/output" \
     --security-opt seccomp=unconfined \
     linuxserver/ffmpeg:latest \
     -y -i /content/bbb_source.mp4 \
     -map 0:v -map 0:v -map 0:v -map 0:v -map 0:a \
     -c:v libx264 -preset fast \
+    -g 60 -keyint_min 60 -sc_threshold 0 \
     -b:v:0 400k -s:v:0 640x360 \
     -b:v:1 800k -s:v:1 854x480 \
     -b:v:2 1200k -s:v:2 1280x720 \
