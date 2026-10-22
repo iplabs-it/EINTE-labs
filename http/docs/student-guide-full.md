@@ -61,7 +61,7 @@ To set up the virtual lab environment, follow these steps:
 
 > **⚠** *Troubleshooting*
 >
-> If `git fetch` reports "not a git repository", `~/EINTE-labs` is not a valid copy of the repository. Remove it with `rm -rf ~/EINTE-labs` and follow Case B.
+> If `git clone` reports "destination path 'EINTE-labs' already exists" or `git fetch` reports "not a git repository", `~/EINTE-labs` is not a valid copy of the repository. Remove it with `rm -rf ~/EINTE-labs` and follow Case B.
 >
 > If `git merge` stops with "Please tell me who you are" or "unable to auto-detect email address", set a git identity once, then run the `git merge` command again:
 >
